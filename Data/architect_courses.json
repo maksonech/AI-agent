@@ -1,0 +1,27 @@
+[
+    {
+        "name": "Основы архитектуры ИТ",
+        "role": "ДКА",
+        "skills": "Общие навыки",
+        "difficulty": 1,
+        "description": "Базовые сведения о корпоративной архитектуре и ее уровнях.",
+        "link": "http://example.com/courses/it-architecture-basics"
+    },
+    {
+        "name": "Введение в бизнес-архитектуру",
+        "role": "ДКА",
+        "skills": "Общие навыки",
+        "difficulty": 2,
+        "description": "Применение бизнес-архитектуры в организации, цели, задачи и ключевые аспекты.",
+        "link": "http://example.com/courses/business-architecture-intro"
+    },
+    {
+        "name": "Введение в бизнес-архитектуру",
+        "role": "ДКА",
+        "skills": "Общие навыки",
+        "difficulty": 2,
+        "description": "Применение бизнес-архитектуры в организации, цели, задачи и ключевые аспекты.",
+        "link": "http://example.com/courses/business-architecture-intro"
+    }
+    
+]
