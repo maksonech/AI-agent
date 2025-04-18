@@ -35,6 +35,5 @@ dist/
 temp/
 
 # Специфичные для этого проекта 
-TestAlerts/multiple_alerts.txt
 TestAlerts/one_line_alert.txt
 TestAlerts/custom_*.txt 
