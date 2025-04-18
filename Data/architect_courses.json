@@ -1,27 +1,110 @@
 [
     {
-        "name": "Основы архитектуры ИТ",
-        "role": "ДКА",
-        "skills": "Общие навыки",
-        "difficulty": 1,
-        "description": "Базовые сведения о корпоративной архитектуре и ее уровнях.",
-        "link": "http://example.com/courses/it-architecture-basics"
+      "request": "/ufs-logger-parameters-ng/parameters",
+      "direction": "OUT",
+      "host": "sb.config.ufsul.ca.sbrf.ru",
+      "description": "Запрос СУП параметров у платформы"
     },
     {
-        "name": "Введение в бизнес-архитектуру",
-        "role": "ДКА",
-        "skills": "Общие навыки",
-        "difficulty": 2,
-        "description": "Применение бизнес-архитектуры в организации, цели, задачи и ключевые аспекты.",
-        "link": "http://example.com/courses/business-architecture-intro"
+      "request": "/paramsv2/5.0/configuration/get",
+      "direction": "OUT",
+      "host": "",
+      "description": "Запрос параметров логирования у платформы"
     },
     {
-        "name": "Введение в бизнес-архитектуру",
-        "role": "ДКА",
-        "skills": "Общие навыки",
-        "difficulty": 2,
-        "description": "Применение бизнес-архитектуры в организации, цели, задачи и ключевые аспекты.",
-        "link": "http://example.com/courses/business-architecture-intro"
+      "request": "/ufs-session-master-direct/rest/v3/inner/getSessionsMetadata",
+      "direction": "OUT",
+      "host": "sb.session.ufsul.ca.sbrf.ru",
+      "description": "Получение метаданных сессий"
+    },
+    {
+      "request": "/ufs-session-master-direct/rest/v3/inner/getSessionSections",
+      "direction": "OUT",
+      "host": "",
+      "description": "Получение секций сессии"
+    },
+    {
+      "request": "/ufs-session-master/rest/v3/inner/getSessionStorage",
+      "direction": "OUT",
+      "host": "",
+      "description": "Получение данных сессии"
+    },
+    {
+      "request": "/ufs-session-master/rest/v3/inner/healthcheck4slave",
+      "direction": "OUT",
+      "host": "",
+      "description": "Health check slave-сервиса"
+    },
+    {
+      "request": "/ufs-session-master-direct/rest/v3/inner/saveSessionSections",
+      "direction": "OUT",
+      "host": "",
+      "description": "Сохранение секций сессии"
+    },
+    {
+      "request": "/push/project/CI02281165/split-byott/v2/event",
+      "direction": "OUT",
+      "host": "rest-ottuaudit.omega.sbrf.ru",
+      "description": "Отправка event-а в OTT Audit"
+    },
+    {
+      "request": "/api/rating/v1/state",
+      "direction": "OUT",
+      "host": "cccore.ingress.geo.prom-111-112-apps.ocp-geo.ocp.ca.sbrf.ru",
+      "description": "Запрос на получение данных о состоянии оценки"
+    },
+    {
+      "request": "/api/startpage/v1/getStartPage",
+      "direction": "OUT",
+      "host": "cccore.ingress.geo.prom-111-112-apps.ocp-geo.ocp.ca.sbrf.ru",
+      "description": "Запрос на получение макета стартовой страницы"
+    },
+    {
+      "request": "/api/operator/v1/splits/available",
+      "direction": "OUT",
+      "host": "cccore.ingress.geo.prom-111-112-apps.ocp-geo.ocp.ca.sbrf.ru",
+      "description": "Запрос на получение данных по доступным сплитам"
+    },
+    {
+      "request": "/api/operator/v2/chats_status",
+      "direction": "OUT",
+      "host": "cccore.ingress.geo.prom-111-112-apps.ocp-geo.ocp.ca.sbrf.ru",
+      "description": "Запрос на получение статуса наличия активных чатов пользователя"
+    },
+    {
+      "request": "/api/operator/v1/status/virtual_assistant",
+      "direction": "OUT",
+      "host": "cccore.ingress.geo.prom-111-112-apps.ocp-geo.ocp.ca.sbrf.ru",
+      "description": "Запрос на получение признака доступности бота"
+    },
+    {
+      "request": "/api/appeal/v1/list",
+      "direction": "OUT",
+      "host": "cccore.ingress.geo.prom-111-112-apps.ocp-geo.ocp.ca.sbrf.ru",
+      "description": "Запрос на получение данных по обращениям"
+    },
+    {
+      "request": "/api/webchat/v1/getDictionary",
+      "direction": "OUT",
+      "host": "cccore.ingress.geo.prom-111-112-apps.ocp-geo.ocp.ca.sbrf.ru",
+      "description": "Запрос на получение данных по справочникам"
+    },
+    {
+      "request": "/api/v1/kkpprb/chat-messages/searchby-user",
+      "direction": "OUT",
+      "host": "ingress-ci02799551.kkpprb-communicationapi-ott-cn.prom-41-42apps.ocpgeo.ocp.ca.sbrf.ru",
+      "description": "Запрос получения истории сообщений от клиента"
+    },
+    {
+      "request": "/api/v1/kkpprb/chat-messages/searchcustomer-unread-messages",
+      "direction": "",
+      "host": "ingress-ci02799551.kkpprb-communicationapi-ott-cn.prom-41-42apps.ocpgeo.ocp.ca.sbrf.ru",
+      "description": "Запрос получения количества непрочитанных клиентом сообщений от оператора или робота"
+    },
+    {
+      "request": "/services/create-contents",
+      "direction": "OUT",
+      "host": "dkb-2.prom-211-212apps.ocpgeo.ocp.ca.sbrf.ru",
+      "description": "Запрос на загрузку файла в ECM"
     }
-    
-]
+  ]

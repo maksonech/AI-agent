@@ -4,7 +4,7 @@ import os
 import json
 
 # Определение корневого пути проекта
-root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../AI py/"))
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 # Загрузка файла настроек
 def load_settings(settings_path: str) -> dict:
@@ -13,7 +13,7 @@ def load_settings(settings_path: str) -> dict:
         return json.load(file)
 
 # Путь к файлу настроек
-settings_path = os.path.join(root_dir, 'proj_v.00001/Config/Seting.json')
+settings_path = os.path.join(root_dir, 'Config/Seting.json')
 settings = load_settings(settings_path)
 
 # Загрузка базы данных курсов
