@@ -1,0 +1,39 @@
+# Игнорирование логов
+Logs/
+*.log
+
+# Python кэш
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Виртуальное окружение
+venv/
+env/
+ENV/
+.env
+
+# Распространенные папки IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Файлы тестирования и отладки
+*.pytest_cache/
+.coverage
+htmlcov/
+
+# Дистрибутивы
+build/
+dist/
+*.egg-info/
+
+# Временные файлы
+*.tmp
+.temp/
+temp/
+
+# Специфичные для этого проекта 
+TestAlerts/one_line_alert.txt
+TestAlerts/custom_*.txt 

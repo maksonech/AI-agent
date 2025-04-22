@@ -1,5 +1,5 @@
 {
-    "course_data_path": "proj_v.00001/Data/architect_courses.json",
-    "glossary_data_path": "proj_v.00001/Data/architect_glossary.json",
+    "course_data_path": "Data/integration_endpoints.json",
+    "glossary_data_path": "Data/architect_glossary.json",
     "default_similarity_threshold": 0.3
 }
