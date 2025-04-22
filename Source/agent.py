@@ -75,5 +75,21 @@ agent = create_react_agent(
     state_modifier=system_prompt,  # Подключаем системный контекст
     checkpointer=MemorySaver()  # Добавляем объект из библиотеки LangGraph для сохранения памяти агента
 )
+
+def run_agent():
+    """
+    Функция для запуска агента в интерактивном режиме
+    """
+    console = Console()
+    console.print(Panel.fit("Агент запущен. Введите ваш запрос (или 'выход' для завершения)"))
+    
+    while True:
+        user_input = input("> ")
+        if user_input.lower() in ["выход", "exit", "quit"]:
+            break
+            
+        response = agent.invoke({"input": user_input})
+        console.print(Panel(response["output"], title="Ответ агента"))
+
 if __name__ == "__main__":
-    chat('SberAX_consultant')
+    run_agent()
