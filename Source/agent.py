@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 from Source.prompts import system_prompt  # Импортируем наш системный промпт
-from Source.tools import get_data_alert, find_endpoint_info, analyze_file_alert
+from Source.tools import get_data_alert, find_endpoint_info, analyze_file_alert, check_token_status
 
 # Загрузка переменных окружения
 # load_dotenv('proj_v.00001/Config/demo_env.env')
@@ -71,7 +71,7 @@ def get_bot_response(prompt: str, max_tokens: int = 500, alert_data: dict = None
 
 agent = create_react_agent(
     model=model,
-    tools=[get_data_alert, find_endpoint_info, analyze_file_alert],
+    tools=[get_data_alert, find_endpoint_info, analyze_file_alert, check_token_status],
     state_modifier=system_prompt,  # Подключаем системный контекст
     checkpointer=MemorySaver()  # Добавляем объект из библиотеки LangGraph для сохранения памяти агента
 )
