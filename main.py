@@ -4,23 +4,24 @@
 import os
 import logging
 from datetime import datetime
-from Source.agent import agent
+from src.core.agent import agent
 
-# Пытаемся импортировать инструменты из обеих возможных локаций
+# Пытаемся импортировать инструменты
 try:
-    from Source.tools import analyze_file_alert, check_token_status
+    from src.tools.alert_tools import analyze_file_alert
+    from src.tools.gigachat_tools import check_token_status
 except ImportError:
-    # Если не удалось импортировать из старого файла, пробуем импортировать из новой структуры
-    from Source.tools.alert_tools import analyze_file_alert
-    from Source.tools.gigachat_tools import check_token_status
+    # Резервный вариант для обратной совместимости
+    from src.tools.tools import analyze_file_alert
+    from src.tools.tools import check_token_status
 
 # Импортируем модули централизованной конфигурации
-from Source.config import get_settings
-from Source.config.logging_config import setup_chat_logger
-from Source.config.settings import get_alert_file_path
+from config import get_settings
+from config.logging_config import setup_chat_logger
+from config.settings import get_alert_file_path
 
 # Импортируем систему обработки исключений
-from Source.config.exceptions import (
+from config.exceptions import (
     AIAgentError, FileOperationError, GigaChatAPIError, DataProcessingError,
     format_exception, safe_execute
 )
