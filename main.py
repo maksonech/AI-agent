@@ -306,7 +306,7 @@ def select_alert_file():
     settings = get_settings()
     
     # Получаем путь к директории с тестовыми алертами
-    alerts_dir = os.path.join(project_dir, 'TestAlerts')
+    alerts_dir = os.path.join(project_dir, 'tests', 'fixtures')
     
     # Проверяем существование директории
     if not os.path.exists(alerts_dir):

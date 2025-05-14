@@ -160,7 +160,7 @@ python main.py
 Для запуска многопоточного анализа можно использовать командный интерфейс:
 
 ```bash
-python cli.py batch --dir TestAlerts --threads 4
+python cli.py batch --dir tests/fixtures --threads 4
 ```
 
 ## Командный интерфейс
@@ -172,10 +172,10 @@ python cli.py batch --dir TestAlerts --threads 4
 python cli.py interactive
 
 # Проанализировать один файл алерта
-python cli.py analyze --file TestAlerts/one_line_alert.txt
+python cli.py analyze --file tests/fixtures/sample_alert.txt
 
 # Проанализировать все файлы в директории в многопоточном режиме
-python cli.py batch --dir TestAlerts --threads 4
+python cli.py batch --dir tests/fixtures --threads 4
 
 # Проверить статус токенов GigaChat
 python cli.py token-status
