@@ -7,20 +7,25 @@ from langchain_core.messages import HumanMessage, AIMessage
 from dotenv import load_dotenv
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
-from Source.prompts import system_prompt  # Импортируем наш системный промпт
+from src.core.prompts import system_prompt  # Изменено с Source на src
 
 # Импортируем инструменты из новой модульной структуры
 try:
-    from Source.tools import get_data_alert, find_endpoint_info, analyze_file_alert, check_token_status
+    from src.tools.alert_tools import get_data_alert, analyze_file_alert
+    from src.tools.api_tools import find_endpoint_info
+    from src.tools.gigachat_tools import check_token_status
 except ImportError:
-    # Если не удалось импортировать из старого файла, пробуем импортировать из новой структуры
-    from Source.tools.alert_tools import get_data_alert, analyze_file_alert
-    from Source.tools.api_tools import find_endpoint_info
-    from Source.tools.gigachat_tools import check_token_status
+    # Резервный импорт
+    from src.tools import get_data_alert, find_endpoint_info, analyze_file_alert, check_token_status
 
 # Импортируем конфигурационные модули
-from Source.config import get_settings, CredentialsManager
-from Source.config.logging_config import setup_tool_logger
+try:
+    from config import get_settings, CredentialsManager
+    from config.logging_config import setup_tool_logger
+except ImportError:
+    # Резервный импорт, если не получилось импортировать из корневого конфига
+    from src.config import get_settings, CredentialsManager
+    from src.config.logging_config import setup_tool_logger
 
 # Загрузка переменных окружения и получение настроек
 load_dotenv()
@@ -41,6 +46,10 @@ model = GigaChat(
 # Настройка логгера для агента
 agent_logger = setup_tool_logger("agent")
 
+# Логирование информации об инициализации
+agent_logger.info(f"Инициализирована модель GigaChat, модель: {settings.get('gigachat_model', 'GigaChat-2')}")
+agent_logger.info(f"Учетные данные: {gigachat_credentials.get('credentials')[:5]}...{gigachat_credentials.get('credentials')[-5:] if gigachat_credentials.get('credentials') else 'None'}")
+agent_logger.info(f"Scope: {gigachat_credentials.get('scope')}")
 
 def get_bot_response(prompt: str, max_tokens: int = None, alert_data: dict = None) -> str:
     """
@@ -100,5 +109,13 @@ agent = create_react_agent(
     state_modifier=system_prompt,  # Подключаем системный контекст
     checkpointer=MemorySaver()  # Добавляем объект из библиотеки LangGraph для сохранения памяти агента
 )
+
+def chat(thread_id: str):
+    """
+    Функция для общения с агентом через консоль.
+    """
+    print(f"Начинаем чат с thread_id: {thread_id}")
+    # Здесь бы был код чат-интерфейса
+
 if __name__ == "__main__":
-    chat('SberAX_consultant')
+    chat('SberAX_consultant') 

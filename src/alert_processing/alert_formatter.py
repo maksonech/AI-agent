@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 Скрипт для преобразования многострочного формата алерта в однострочный.
-Читает данные из TestAlerts/sample_alert.txt и записывает в TestAlerts/one_line_alert.txt
+Читает данные из tests/fixtures/sample_alert.txt и записывает в tests/fixtures/one_line_alert.txt
 """
 import os
 import logging
@@ -66,11 +66,11 @@ def main():
     Основная функция скрипта
     """
     # Определяем путь к директории проекта
-    project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     
     # Формируем пути к файлам
-    input_file_path = os.path.join(project_dir, 'TestAlerts/sample_alert.txt')
-    output_file_path = os.path.join(project_dir, 'TestAlerts/one_line_alert.txt')
+    input_file_path = os.path.join(project_dir, 'tests/fixtures/sample_alert.txt')
+    output_file_path = os.path.join(project_dir, 'tests/fixtures/one_line_alert.txt')
     
     print(f"Исходный файл: {input_file_path}")
     print(f"Целевой файл: {output_file_path}")

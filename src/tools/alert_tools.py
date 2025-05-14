@@ -7,7 +7,7 @@ import os
 from langchain.tools import Tool
 from datetime import datetime, timedelta
 # Импортируем функции парсинга алертов из нового модуля
-from Source.alert_parser import (
+from src.alert_processing.alert_parser import (
     parse_alert,
     get_data_alert as parse_get_data_alert,
     extract_additional_alert_info,
@@ -29,7 +29,18 @@ def fallback_bot_response(prompt, max_tokens=1000, alert_data=None):
     Returns:
         str: Сообщение об ошибке
     """
-    return f"Невозможно получить анализ от бота из-за проблемы с импортом функции get_bot_response. Проверьте структуру проекта и импорты."
+    import traceback
+    error_info = traceback.format_exc()
+    tool_logger.error(f"Использование заглушки fallback_bot_response. Запрос: {prompt[:50]}...")
+    tool_logger.error(f"Стек вызовов:\n{error_info}")
+    
+    return f"""Извините, не удалось получить ответ от AI-ассистента из-за технической проблемы:
+1. Произошла ошибка при импорте функции get_bot_response
+2. Вместо полного анализа используется резервный ответ
+3. Возможное решение: проверьте доступность API GigaChat и настройки импорта
+
+Пожалуйста, сообщите об этой проблеме разработчикам.
+"""
 
 # Функция get_data_alert теперь является оберткой для функции из alert_parser
 def get_data_alert(alert_text: str) -> dict:
@@ -48,33 +59,34 @@ def get_data_alert(alert_text: str) -> dict:
     # Используем функцию из модуля alert_parser
     return parse_get_data_alert(alert_text)
 
-def analyze_file_alert(file_path: str = None) -> str:
+def analyze_file_alert(file_path: str = None, alert_number: int = None) -> str:
     """
     Анализ алерта из указанного файла или файла по умолчанию.
     Читает содержимое файла и анализирует его.
     
     Args:
         file_path: Путь к файлу с алертом (опционально)
+        alert_number: Номер алерта для анализа в файле с несколькими алертами (опционально)
         
     Returns:
         str: Результат анализа алерта
     """
     try:
-        tool_logger.info("Вызов функции analyze_file_alert")
+        tool_logger.info(f"Вызов функции analyze_file_alert c параметрами: file_path={file_path}, alert_number={alert_number}")
         
         # Если путь не указан, используем файл по умолчанию
         if not file_path:
             # Импортируем функцию для получения пути к файлу алерта
             try:
-                from Source.config.settings import get_alert_file_path
+                from src.config.settings import get_alert_file_path
                 file_path = get_alert_file_path()
                 tool_logger.info(f"Получен путь к файлу алерта по умолчанию: {file_path}")
             except ImportError:
                 # Если не удалось импортировать, используем прямой путь
                 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-                test_alerts_dir = os.path.join(root_dir, 'TestAlerts')
+                test_alerts_dir = os.path.join(root_dir, 'tests', 'fixtures')
                 
-                # Пробуем найти любой .txt файл в директории TestAlerts
+                # Пробуем найти любой .txt файл в директории с тестовыми алертами
                 try:
                     for filename in os.listdir(test_alerts_dir):
                         if filename.endswith('.txt'):
@@ -82,12 +94,12 @@ def analyze_file_alert(file_path: str = None) -> str:
                             tool_logger.info(f"Используем первый найденный файл алерта: {file_path}")
                             break
                     else:
-                        default_file = os.path.join(test_alerts_dir, 'sample_alert.txt')
+                        default_file = os.path.join(test_alerts_dir, 'multiple_alerts.txt')
                         tool_logger.warning(f"Не найдены файлы алертов, используем путь по умолчанию: {default_file}")
                         file_path = default_file
                 except Exception as e:
                     tool_logger.error(f"Ошибка при поиске файлов алертов: {str(e)}")
-                    default_file = os.path.join(test_alerts_dir, 'sample_alert.txt')
+                    default_file = os.path.join(test_alerts_dir, 'multiple_alerts.txt')
                     file_path = default_file
         
         # Проверяем существование файла
@@ -134,6 +146,25 @@ def analyze_file_alert(file_path: str = None) -> str:
             alerts.append(alert_content)
         
         tool_logger.info(f"Найдено {len(alerts)} алертов в файле")
+        
+        # Проверяем, запрашивается ли конкретный алерт
+        if alert_number is not None:
+            tool_logger.info(f"Запрошен конкретный алерт с номером {alert_number}")
+            
+            # Проверяем, существует ли запрошенный алерт
+            if alert_number <= 0 or alert_number > len(alerts):
+                error_msg = f"В файле содержится {len(alerts)} алертов. Нет алерта с номером {alert_number}."
+                tool_logger.error(error_msg)
+                return error_msg
+                
+            # Анализируем только запрошенный алерт
+            specific_alert = alerts[alert_number - 1]
+            result = f"## Алерт #{alert_number}\n\n"
+            analysis = analyze_single_alert(specific_alert, include_bot_analysis=True)
+            result += analysis
+            
+            tool_logger.info(f"Успешно проанализирован алерт #{alert_number}")
+            return result
         
         # Анализируем каждый алерт отдельно
         results = []
@@ -370,7 +401,7 @@ def analyze_single_alert(alert_text, include_bot_analysis=True):
         # Добавляем анализ от бота, если это требуется
         if include_bot_analysis:
             try:
-                from Source.agent import get_bot_response
+                from src.core.agent import get_bot_response
                 result += "\n#### 🤖 Анализ от AI-ассистента\n\n"
                 bot_prompt = f"Проанализируй следующий алерт и кратко опиши проблему, возможные причины и рекомендации по устранению:\n\n{alert_text}"
                 bot_response = get_bot_response(bot_prompt, max_tokens=800, alert_data=structured_data)
@@ -470,6 +501,7 @@ analyze_file_alert_tool = Tool(
     description="Анализирую алерт из выбранного файла и предоставляю результаты анализа."
 )
 
-# Экспортируем инструменты
+# Экспортируем инструменты и функции
 get_data_alert = get_data_alert_tool
-analyze_file_alert = analyze_file_alert_tool 
+analyze_file_alert_tool = analyze_file_alert_tool  # Инструмент для использования через invoke
+analyze_file_alert = analyze_file_alert  # Оригинальная функция для прямого вызова 

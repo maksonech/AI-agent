@@ -26,7 +26,7 @@ def setup_tool_logger(logger_name='tool_logger'):
     tool_logger.setLevel(logging.DEBUG)
     
     # Создание директории для логов, если она не существует
-    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'Logs')
+    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'logs')
     os.makedirs(log_dir, exist_ok=True)
     
     # Настройка обработчика для вывода в файл

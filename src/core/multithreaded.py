@@ -10,14 +10,14 @@ from typing import List, Dict, Any, Optional, Callable, Tuple
 from datetime import datetime
 
 try:
-    from Source.tools import analyze_file_alert
+    from src.tools import analyze_file_alert
 except ImportError:
-    from Source.tools.alert_tools import analyze_file_alert
+    from src.tools.alert_tools import analyze_file_alert
 
-from Source.config import get_settings
-from Source.config.logging_config import setup_tool_logger
-from Source.config.settings import get_alert_file_path, get_data_path
-from Source.config.exceptions import (
+from src.config import get_settings
+from src.config.logging_config import setup_tool_logger
+from src.config.settings import get_alert_file_path, get_data_path
+from src.config.exceptions import (
     FileOperationError, DataProcessingError, safe_execute, format_exception
 )
 
@@ -208,10 +208,10 @@ def process_directory(
     
     # Получаем абсолютный путь к директории
     if not os.path.isabs(directory_path):
-        if directory_path.startswith("TestAlerts"):
+        if directory_path.startswith("tests/fixtures"):
             directory_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), directory_path)
         else:
-            directory_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "TestAlerts", directory_path)
+            directory_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tests", "fixtures", directory_path)
     
     # Проверяем существование директории
     if not os.path.exists(directory_path):
@@ -277,7 +277,7 @@ def save_results_to_json(results: Dict[str, Any], output_path: Optional[str] = N
 
 if __name__ == "__main__":
     # Пример использования
-    test_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "TestAlerts")
+    test_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tests", "fixtures")
     
     print(f"Анализ алертов в директории: {test_dir}")
     

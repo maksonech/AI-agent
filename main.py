@@ -5,6 +5,7 @@ import os
 import logging
 from datetime import datetime
 from src.core.agent import agent
+import re
 
 # Пытаемся импортировать инструменты
 try:
@@ -107,7 +108,9 @@ def chat(thread_id: str):
                     print(f"\n📄 Анализ файла: {os.path.basename(selected_file)}")
                     logger.info(f"Выбран файл для анализа: {selected_file}")
                     
-                    result = analyze_file_alert.invoke(selected_file)
+                    # Используем прямую функцию вместо инструмента LangChain
+                    from src.tools.alert_tools import analyze_file_alert as analyze_file_alert_func
+                    result = analyze_file_alert_func(file_path=selected_file)
                     
                     # Читаем оригинальный текст алерта для сохранения
                     original_alert_text = ""
@@ -255,19 +258,156 @@ def chat(thread_id: str):
                     logger.info("Запрос информации о последнем алерте отклонен - алерт не был проанализирован")
                     continue
             
+            # Проверяем запрос на анализ конкретного алерта по номеру (например, "2 алерт")
+            alert_number_match = re.match(r'^\s*(\d+)\s+алерт', user_input.lower())
+            if alert_number_match:
+                alert_number = int(alert_number_match.group(1))
+                logger.info(f"Пользователь запрашивает информацию о конкретном алерте по номеру: {alert_number}")
+                
+                if alert_analyzed and last_alert_file:
+                    def get_specific_alert_handler():
+                        try:
+                            # Используем прямой вызов функции analyze_file_alert с указанием номера алерта
+                            from src.tools.alert_tools import analyze_file_alert as analyze_file_alert_func
+                            logger.info(f"Прямой вызов analyze_file_alert с номером алерта {alert_number}")
+                            analysis_result = analyze_file_alert_func(file_path=last_alert_file, alert_number=alert_number)
+                            
+                            # Проверяем результат - если это строка с сообщением об ошибке
+                            if analysis_result.startswith("В файле") and "Нет алерта с номером" in analysis_result:
+                                return analysis_result
+                            
+                            # Получаем имя файла для сообщения
+                            basename = os.path.basename(last_alert_file)
+                            
+                            # Читаем содержимое файла для выделения конкретного алерта
+                            with open(last_alert_file, 'r', encoding='utf-8') as f:
+                                all_alerts_text = f.read()
+                                
+                            # Используем более точный паттерн для разделения алертов
+                            alert_starts = re.finditer(r'(?:^|\n)(?:ПРОМ|PROM|DEV) \|', all_alerts_text)
+                            alert_positions = [match.start() for match in alert_starts]
+                            
+                            # Если не найдено ни одного алерта с префиксом, проверяем альтернативные паттерны
+                            if not alert_positions:
+                                alt_alert_starts = re.finditer(r'(?:^|\n)АС Рефлекс', all_alerts_text)
+                                alert_positions = [match.start() for match in alt_alert_starts]
+                            
+                            # Делим текст на отдельные алерты
+                            alerts = []
+                            for i in range(len(alert_positions)):
+                                start = alert_positions[i]
+                                end = alert_positions[i+1] if i < len(alert_positions) - 1 else len(all_alerts_text)
+                                alert_content = all_alerts_text[start:end].strip()
+                                alerts.append(alert_content)
+                            
+                            # Проверяем корректность номера алерта - для сохранения контекста
+                            if alert_number <= 0 or alert_number > len(alerts):
+                                return f"В файле {basename} содержится {len(alerts)} алертов. Нет алерта с номером {alert_number}."
+                            
+                            # Получаем текст нужного алерта
+                            specific_alert_text = alerts[alert_number - 1]
+                            
+                            # Сохраняем выбранный алерт в память бота для последующего анализа
+                            save_to_context = f"""Я проанализировал алерт #{alert_number} из файла {basename}. 
+
+Оригинальный текст алерта:
+```
+{specific_alert_text}
+```
+"""
+                            logger.info(f"Передаем боту текст {alert_number}-го алерта для анализа")
+
+                            # Сохраняем информацию для последующего диалога
+                            agent.invoke({"messages": [("user", "Сохрани информацию о выбранном алерте:"), ("assistant", save_to_context)]}, config=config)
+                            
+                            # Возвращаем результат анализа
+                            print("🤖 :", analysis_result)
+                            return analysis_result
+                        except Exception as e:
+                            error_message = f"Ошибка при обработке алерта номер {alert_number}: {str(e)}"
+                            logger.error(error_message, exc_info=True)
+                            raise AIAgentError(error_message)
+                    
+                    # Используем safe_execute для безопасного выполнения функции
+                    result = safe_execute(
+                        get_specific_alert_handler,
+                        error_message=f"Ошибка при запросе информации об алерте номер {alert_number}",
+                        logger=logger,
+                        expected_exceptions=[AIAgentError, FileOperationError, Exception]
+                    )
+                    
+                    if isinstance(result, str) and result.startswith("❌"):
+                        print("🤖 : Извините, не удалось получить ответ от бота.")
+                        print(f"Подробности ошибки: {result}")
+                        logger.error(f"Ошибка при запросе алерта номер {alert_number}: {result}")
+                    
+                    continue
+                else:
+                    print("🤖 : Вы еще не анализировали ни одного алерта в этой сессии. Введите 'файл' или 'анализ файла алерта' для начала анализа.")
+                    logger.info("Запрос информации о конкретном алерте отклонен - алерт не был проанализирован")
+                    continue
+            
             # Обычный запрос к агенту
             def chat_with_agent_handler():
                 logger.info(f"Отправка запроса агенту: {user_input}")
-                response = agent.invoke({"messages": [("user", user_input)]}, config=config)
                 
-                if "output" in response:
-                    bot_response = response["output"]
+                try:
+                    # Сначала пробуем через agent.invoke
+                    try:
+                        response = agent.invoke({"messages": [("user", user_input)]}, config=config)
+                        
+                        logger.info(f"Тип ответа: {type(response)}")
+                        logger.info(f"Структура ответа: {list(response.keys()) if hasattr(response, 'keys') else 'не является словарем'}")
+                        
+                        # Пытаемся извлечь ответ из response
+                        if isinstance(response, str):
+                            bot_response = response
+                            logger.info("Ответ получен в виде строки")
+                        elif isinstance(response, dict):
+                            if "output" in response:
+                                bot_response = response["output"]
+                                logger.info("Ответ получен из поля 'output'")
+                            elif "messages" in response:
+                                logger.info("Ответ содержит список сообщений")
+                                bot_messages = [msg for msg in response["messages"] if hasattr(msg, "content") and isinstance(msg.content, str) and len(msg.content.strip()) > 0]
+                                if bot_messages:
+                                    bot_response = bot_messages[-1].content
+                                    logger.info(f"Извлечено последнее сообщение из списка, длина: {len(bot_response)}")
+                                else:
+                                    raise ValueError("Не найдено текстовых сообщений в ответе")
+                            else:
+                                # Если не удалось извлечь ответ стандартными способами, проверяем все поля
+                                text_fields = {}
+                                for key, value in response.items():
+                                    if isinstance(value, str) and len(value) > 10:
+                                        text_fields[key] = value
+                                        
+                                if text_fields:
+                                    # Берем самое длинное текстовое поле
+                                    field_key = max(text_fields.items(), key=lambda x: len(x[1]))[0]
+                                    bot_response = text_fields[field_key]
+                                    logger.info(f"Используем поле '{field_key}' в качестве ответа, длина: {len(bot_response)}")
+                                else:
+                                    raise ValueError("Не найдено подходящих текстовых полей в ответе")
+                        else:
+                            # Если тип ответа не str и не dict, пробуем преобразовать к строке
+                            bot_response = str(response)
+                            logger.info(f"Преобразован ответ неизвестного типа {type(response)} к строке")
+                    except Exception as e:
+                        # Если не удалось получить ответ через agent.invoke, 
+                        # используем прямой вызов get_bot_response
+                        logger.warning(f"Ошибка при использовании agent.invoke: {str(e)}, пробуем прямой вызов get_bot_response")
+                        
+                        from src.core.agent import get_bot_response
+                        bot_response = get_bot_response(user_input, max_tokens=800)
+                        logger.info(f"Получен ответ через прямой вызов get_bot_response, длина: {len(bot_response)}")
+                    
                     print("🤖 :", bot_response)
-                    logger.info(f"Бот: {bot_response}")
+                    logger.info(f"Бот: {bot_response[:100]}...")
                     return bot_response
-                else:
-                    error_message = "Не удалось получить ответ от бота"
-                    logger.warning(error_message)
+                except Exception as e:
+                    error_message = f"Ошибка при обработке запроса: {str(e)}"
+                    logger.error(error_message, exc_info=True)
                     raise AIAgentError(error_message)
             
             # Используем safe_execute для безопасного выполнения функции
@@ -314,7 +454,7 @@ def select_alert_file():
         logger.error(error_message)
         raise FileOperationError(error_message)
     
-    # Получаем список всех файлов .txt в директории TestAlerts
+    # Получаем список всех файлов .txt в директории tests/fixtures
     alert_files_dict = {}
     alert_file_index = 1
     

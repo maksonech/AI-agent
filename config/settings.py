@@ -22,14 +22,14 @@ if not logger.handlers:
     logger.addHandler(console_handler)
 
 # Базовые пути приложения
-APP_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-DATA_DIR = os.path.join(APP_ROOT, 'Data')
-CONFIG_DIR = os.path.join(APP_ROOT, 'Config')
-LOGS_DIR = os.path.join(APP_ROOT, 'Logs')
-TEST_ALERTS_DIR = os.path.join(APP_ROOT, 'TestAlerts')
+APP_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(APP_ROOT, 'data')
+CONFIG_DIR = os.path.join(APP_ROOT, 'config')
+LOGS_DIR = os.path.join(APP_ROOT, 'src', 'logs')
+TEST_ALERTS_DIR = os.path.join(APP_ROOT, 'tests', 'fixtures')
 
 # Пути к файлам настроек
-SETTINGS_FILE = os.path.join(CONFIG_DIR, 'Seting.json')  # По историческим причинам файл называется "Seting.json", а не "Settings.json"
+SETTINGS_FILE = os.path.join(CONFIG_DIR, 'settings.json')
 
 # Настройки по умолчанию, если файл не найден
 DEFAULT_SETTINGS = {
@@ -39,7 +39,7 @@ DEFAULT_SETTINGS = {
     "gigachat_model": "GigaChat-2",
     "gigachat_auth_url": "https://gigachat.devices.sberbank.ru/api/v1/oauth/token",
     "gigachat_info_url": "https://gigachat.devices.sberbank.ru/api/v1/accounts/info",
-    "default_alert_file": "TestAlerts/sample_alert.txt",
+    "default_alert_file": "tests/fixtures/sample_alert.txt",
     "default_max_tokens": 800
 }
 
@@ -210,9 +210,9 @@ def get_alert_file_path(filename: Optional[str] = None) -> str:
     if os.path.isabs(filename):
         result_path = filename
     else:
-        # Если путь относительный и начинается с "TestAlerts/"
-        if filename.startswith("TestAlerts/"):
-            filename = filename[11:]  # Убираем префикс "TestAlerts/"
+        # Если путь относительный и начинается с "tests/fixtures/"
+        if filename.startswith("tests/fixtures/"):
+            filename = filename[14:]  # Убираем префикс "tests/fixtures/"
         
         result_path = os.path.join(TEST_ALERTS_DIR, filename)
     

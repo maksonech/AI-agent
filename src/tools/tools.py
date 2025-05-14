@@ -11,7 +11,7 @@ tool_logger = logging.getLogger('tool_logger')
 tool_logger.setLevel(logging.DEBUG)
 
 # Создание директории для логов, если она не существует
-log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'Logs')
+log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'logs')
 os.makedirs(log_dir, exist_ok=True)
 
 # Настройка обработчика для вывода в файл
@@ -30,9 +30,9 @@ tool_logger.info("Загрузка инструментов из новой мо
 
 # Импортируем инструменты из нового модульного расположения
 try:
-    from Source.tools.alert_tools import get_data_alert, analyze_file_alert, fallback_bot_response
-    from Source.tools.api_tools import find_endpoint_info
-    from Source.tools.gigachat_tools import check_token_status
+    from src.tools.alert_tools import get_data_alert, analyze_file_alert, fallback_bot_response
+    from src.tools.api_tools import find_endpoint_info
+    from src.tools.gigachat_tools import check_token_status
     
     tool_logger.info("Инструменты успешно импортированы из новой модульной структуры")
 except ImportError as e:

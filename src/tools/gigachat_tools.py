@@ -8,14 +8,26 @@ import urllib3
 import requests
 from langchain.tools import Tool
 from typing import Dict, Any, Optional
+import os
+import time
+from datetime import datetime, timedelta
 
 # Импортируем конфигурационные модули
-from Source.config import get_settings, CredentialsManager
-from Source.config.logging_config import setup_tool_logger
-from Source.config.exceptions import (
-    GigaChatAPIError, AuthenticationError, CredentialsError,
-    exception_handler, format_exception
-)
+try:
+    from config import get_settings, CredentialsManager
+    from config.logging_config import setup_tool_logger
+    from config.exceptions import (
+        GigaChatAPIError, AuthenticationError, CredentialsError,
+        exception_handler, format_exception
+    )
+except ImportError:
+    # Резервный импорт, если не получилось импортировать из корневого конфига
+    from src.config import get_settings, CredentialsManager
+    from src.config.logging_config import setup_tool_logger
+    from src.config.exceptions import (
+        GigaChatAPIError, AuthenticationError, CredentialsError,
+        exception_handler, format_exception
+    )
 
 # Инициализируем логгер
 tool_logger = setup_tool_logger("gigachat")

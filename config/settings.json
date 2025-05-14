@@ -1,5 +1,7 @@
 {
-    "course_data_path": "Data/integration_endpoints.json",
-    "glossary_data_path": "Data/architect_glossary.json",
-    "default_similarity_threshold": 0.3
+    "course_data_path": "data/integration_endpoints.json",
+    "glossary_data_path": "data/architect_glossary.json",
+    "default_similarity_threshold": 0.3,
+    "gigachat_model": "GigaChat-2",
+    "default_max_tokens": 800
 }

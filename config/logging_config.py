@@ -11,8 +11,8 @@ from typing import Optional, Dict, Any
 # Базовые пути для логов
 def get_logs_dir() -> str:
     """Возвращает путь к директории с логами."""
-    app_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-    return os.path.join(app_root, 'Logs')
+    app_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    return os.path.join(app_root, 'src', 'logs')
 
 def get_log_path(log_type: str, timestamp: Optional[str] = None) -> str:
     """

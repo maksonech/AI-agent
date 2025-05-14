@@ -152,7 +152,7 @@ def safe_execute(
             
         # Логируем исключение, если предоставлен логгер
         if logger:
-            log_exception(e, logger)
+            logger.error(f"Ошибка при выполнении {func.__name__}: {str(e)}", exc_info=True)
             
         # Вызываем пользовательский обработчик, если предоставлен
         if error_handler:
@@ -162,7 +162,11 @@ def safe_execute(
         if isinstance(e, AIAgentError):
             error_text = format_exception(e)
         else:
-            error_text = f"{error_message}: {str(e)}"
+            error_text = f"{error_message}: {str(e)} (тип: {type(e).__name__})"
+            
+        # Добавляем отладочную информацию
+        if logger:
+            logger.debug(f"Стек вызовов:\n{traceback.format_exc()}")
             
         # Если исключение ожидаемое, возвращаем сообщение об ошибке
         # В противном случае пробрасываем исключение дальше

@@ -3,7 +3,7 @@
 Содержит инструменты для поиска информации об API эндпоинтах.
 """
 from langchain.tools import Tool
-from Source.utils import courses_database  # Импортируем обработанный JSON с эндпоинтами
+from src.core.utils import courses_database  # Импортируем обработанный JSON с эндпоинтами
 from .logging_utils import tool_logger
 
 def find_endpoint_info(query: str) -> str:

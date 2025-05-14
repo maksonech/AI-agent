@@ -10,10 +10,15 @@ import time
 from typing import List, Dict, Any
 from datetime import datetime
 
-# Импортируем необходимые модули
-from Source.config import get_settings
-from Source.config.logging_config import setup_tool_logger
-from Source.config.exceptions import AIAgentError, FileOperationError, safe_execute
+# Импортируем необходимые библиотеки для работы с конфигурацией
+try:
+    from src.config import get_settings
+    from src.config.logging_config import setup_tool_logger
+    from src.config.exceptions import AIAgentError, FileOperationError, safe_execute
+except ImportError as e:
+    print(f"Ошибка импорта конфигурационных модулей: {str(e)}")
+    input("Нажмите Enter для выхода...")
+    sys.exit(1)
 
 # Настройка логгера
 cli_logger = setup_tool_logger("cli")
@@ -35,10 +40,10 @@ def setup_parser() -> argparse.ArgumentParser:
   python cli.py interactive
   
   # Проанализировать один файл алерта
-  python cli.py analyze --file TestAlerts/one_line_alert.txt
+  python cli.py analyze --file tests/fixtures/one_line_alert.txt
   
   # Проанализировать все файлы в директории в многопоточном режиме
-  python cli.py batch --dir TestAlerts --threads 4
+  python cli.py batch --dir tests/fixtures --threads 4
   
   # Проверить статус токенов GigaChat
   python cli.py token-status
@@ -71,8 +76,13 @@ def setup_parser() -> argparse.ArgumentParser:
 
 def run_interactive_mode() -> None:
     """Запускает интерактивный режим общения с агентом."""
-    from Source.main import chat
-    from datetime import datetime
+    try:
+        from src.main import chat
+        print("Модуль основного чата успешно импортирован")
+    except ImportError as e:
+        print(f"❌ Ошибка импорта модуля main: {str(e)}")
+        print("Функция чата будет недоступна")
+        return
     
     print("Запуск интерактивного режима AI-агента...")
     
@@ -97,9 +107,14 @@ def run_single_analysis(file_path: str, output_path: str = None) -> None:
         output_path: Путь для сохранения результата (опционально)
     """
     try:
-        from Source.tools.alert_tools import analyze_file_alert
+        from src.tools.alert_tools import analyze_file_alert
     except ImportError:
-        from Source.tools import analyze_file_alert
+        try:
+            from src.tools import analyze_file_alert
+        except ImportError as e:
+            print(f"❌ Ошибка импорта модуля analyze_file_alert: {str(e)}")
+            print("Функция анализа алертов будет недоступна")
+            return
     
     print(f"Анализ файла: {file_path}")
     
@@ -145,7 +160,13 @@ def run_batch_analysis(directory: str, pattern: str = "*.txt", threads: int = 4,
         threads: Количество потоков для обработки
         output_path: Путь для сохранения результатов (опционально)
     """
-    from Source.multithreaded import process_directory, save_results_to_json
+    try:
+        from src.multithreaded import process_directory, save_results_to_json
+        print("Модуль многопоточной обработки успешно импортирован")
+    except ImportError as e:
+        print(f"❌ Ошибка импорта модуля multithreaded: {str(e)}")
+        print("Функции пакетной обработки будут недоступны")
+        return
     
     print(f"Пакетный анализ файлов в директории: {directory}")
     print(f"Шаблон файлов: {pattern}")
@@ -189,9 +210,14 @@ def run_batch_analysis(directory: str, pattern: str = "*.txt", threads: int = 4,
 def check_token_status() -> None:
     """Проверяет и выводит статус токенов GigaChat."""
     try:
-        from Source.tools.gigachat_tools import check_token_status
+        from src.tools.gigachat_tools import check_token_status
     except ImportError:
-        from Source.tools import check_token_status
+        try:
+            from src.tools import check_token_status
+        except ImportError as e:
+            print(f"❌ Ошибка импорта модуля check_token_status: {str(e)}")
+            print("Функция проверки токенов будет недоступна")
+            return
     
     print("Проверка статуса токенов GigaChat...")
     
