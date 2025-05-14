@@ -1,12 +1,14 @@
-langchain-gigachat  # Работа с API GigaChat для обработки запросов через LangChain
-langchain-community  # Дополнительные утилиты и инструменты от сообщества LangChain
-langgraph  # Построение цепочек взаимодействий между агентами и данными
-langgraph-checkpoint  # Сохранение и восстановление состояния диалога
+langchain>=0.1.0
+langchain-core>=0.1.0
+langchain-gigachat>=0.0.4
+langchain-community>=0.0.10
+langgraph>=0.0.21
+langgraph-checkpoint>=0.0.1
 langgraph-cli  # CLI для управления агентами и цепочками через командную строку
 langgraph-sdk  # Инструменты для разработки кастомных агентов и цепочек
 #langchain_chroma  # Интеграция LangChain с векторными базами данных Chroma
-rapidfuzz  # Быстрый поиск похожих строк для обработки запросов
-python-dotenv  # Загрузка переменных окружения из файла .env
-rich  # Форматированный вывод в терминале
-langchain-core  # Базовые компоненты LangChain для работы с сообщениями
-langchain  # Основная библиотека LangChain для инструментов и агентов
+python-dotenv>=1.0.0
+requests>=2.31.0
+urllib3>=2.0.7
+rich>=13.6.0
+rapidfuzz>=3.0.0

@@ -8,26 +8,41 @@ from dotenv import load_dotenv
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 from Source.prompts import system_prompt  # Импортируем наш системный промпт
-from Source.tools import get_data_alert, find_endpoint_info, analyze_file_alert, check_token_status
 
-# Загрузка переменных окружения
-# load_dotenv('proj_v.00001/Config/demo_env.env')
+# Импортируем инструменты из новой модульной структуры
+try:
+    from Source.tools import get_data_alert, find_endpoint_info, analyze_file_alert, check_token_status
+except ImportError:
+    # Если не удалось импортировать из старого файла, пробуем импортировать из новой структуры
+    from Source.tools.alert_tools import get_data_alert, analyze_file_alert
+    from Source.tools.api_tools import find_endpoint_info
+    from Source.tools.gigachat_tools import check_token_status
 
+# Импортируем конфигурационные модули
+from Source.config import get_settings, CredentialsManager
+from Source.config.logging_config import setup_tool_logger
 
-# Инициализация модели GigaChat
-#model = GigaChat(
-    #credentials=os.getenv("GIGACHAT_API_CREDENTIALS"),
-    #scope=os.getenv("GIGACHAT_API_SCOPE"),
-    #model=GigaChat-Max,
+# Загрузка переменных окружения и получение настроек
+load_dotenv()
+settings = get_settings()
+
+# Инициализация менеджера учетных данных
+credentials_manager = CredentialsManager(load_from_env=True)
+gigachat_credentials = credentials_manager.get_gigachat_credentials()
+
+# Инициализация модели GigaChat с настройками из централизованной конфигурации
 model = GigaChat(
-              model="GigaChat-2",
-              credentials ="ZTlkOGQxOTgtYTFlYy00MDkzLWEyNDUtNjlhYThkN2EzZDRkOjYyMmM1OTM2LTc5NDAtNGFkMC1hZDczLTMxMzEwOWNlZjQ1ZQ==",
-              scope="GIGACHAT_API_PERS",
-              verify_ssl_certs=False
-              )
+    model=settings.get("gigachat_model", "GigaChat-2"),
+    credentials=gigachat_credentials.get("credentials"),
+    scope=gigachat_credentials.get("scope"),
+    verify_ssl_certs=gigachat_credentials.get("verify_ssl_certs", False)
+)
+
+# Настройка логгера для агента
+agent_logger = setup_tool_logger("agent")
 
 
-def get_bot_response(prompt: str, max_tokens: int = 500, alert_data: dict = None) -> str:
+def get_bot_response(prompt: str, max_tokens: int = None, alert_data: dict = None) -> str:
     """
     Функция для получения ответа от бота на основе переданного промпта с возможным
     использованием структурированных данных алерта для углубленного анализа.
@@ -41,6 +56,10 @@ def get_bot_response(prompt: str, max_tokens: int = 500, alert_data: dict = None
         Ответ бота с углубленным анализом
     """
     try:
+        # Если max_tokens не указан, берем из настроек
+        if max_tokens is None:
+            max_tokens = settings.get("default_max_tokens", 500)
+            
         enhanced_prompt = prompt
         
         # Если предоставлены структурированные данные, дополняем запрос
@@ -62,11 +81,17 @@ def get_bot_response(prompt: str, max_tokens: int = 500, alert_data: dict = None
             
             enhanced_prompt += additional_context
         
+        agent_logger.info(f"Запрос к боту: {enhanced_prompt[:100]}...")
+        
         # Вызываем модель с расширенным промптом
         response = model.invoke([HumanMessage(content=enhanced_prompt)])
+        agent_logger.info(f"Получен ответ от бота длиной {len(response.content)} символов")
+        
         return response.content
     except Exception as e:
-        return f"Ошибка анализа: {str(e)}"
+        error_msg = f"Ошибка анализа: {str(e)}"
+        agent_logger.error(error_msg, exc_info=True)
+        return error_msg
 
 
 agent = create_react_agent(
