@@ -16,8 +16,6 @@ requests>=2.31.0
 urllib3>=2.0.7
 base64io>=1.0.3
 typing-extensions>=4.5.0
-datetime>=5.2
-logging>=0.4.9.6
 
 # Форматирование и UI
 rich>=13.6.0
