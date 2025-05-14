@@ -1,0 +1,5 @@
+{
+    "course_data_path": "Data/integration_endpoints.json",
+    "glossary_data_path": "Data/architect_glossary.json",
+    "default_similarity_threshold": 0.3
+}
