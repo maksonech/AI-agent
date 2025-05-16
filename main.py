@@ -3,8 +3,23 @@
 # Импорты
 import os
 import logging
+import sys
 from datetime import datetime
-from src.core.agent import agent
+
+# Проверяем доступность модели GigaChat перед импортом агента
+try:
+    from src.core.agent import model as gigachat_model
+    if gigachat_model is None:
+        print("⚠️ ОШИБКА: Модель GigaChat не инициализирована")
+        logging.error("Модель GigaChat не инициализирована")
+        sys.exit(1)
+except ImportError as e:
+    print(f"⚠️ ОШИБКА: Не удалось импортировать модель GigaChat: {str(e)}")
+    logging.error(f"Не удалось импортировать модель GigaChat: {str(e)}")
+    sys.exit(1)
+
+# Импортируем функцию получения агента вместо прямого импорта
+from src.core.agent import get_agent
 import re
 
 # Пытаемся импортировать инструменты
@@ -138,7 +153,7 @@ def chat(thread_id: str):
                     
                     # Добавляем результат анализа в историю диалога
                     try:
-                        response = agent.invoke({"messages": [("user", "Сохрани информацию о проанализированном алерте:"), ("assistant", save_to_context)]}, config=config)
+                        response = get_agent().invoke({"messages": [("user", "Сохрани информацию о проанализированном алерте:"), ("assistant", save_to_context)]}, config=config)
                         logger.info("Результат анализа алерта сохранен в истории диалога с ботом")
                         print("📋 Информация об алерте сохранена в памяти бота. Вы можете задавать вопросы по этому алерту.")
                     except Exception as e:
@@ -195,7 +210,7 @@ def chat(thread_id: str):
                         
                         # Добавляем результат анализа в историю диалога
                         try:
-                            response = agent.invoke({"messages": [("user", "Сохрани обновленную информацию о проанализированном алерте:"), ("assistant", save_to_context)]}, config=config)
+                            response = get_agent().invoke({"messages": [("user", "Сохрани обновленную информацию о проанализированном алерте:"), ("assistant", save_to_context)]}, config=config)
                             logger.info("Обновленный результат анализа алерта сохранен в истории диалога с ботом")
                             print("📋 Обновленная информация об алерте сохранена в памяти бота.")
                         except Exception as e:
@@ -229,7 +244,7 @@ def chat(thread_id: str):
                         chat_request = f"Расскажи мне подробнее о проанализированном алерте. Какая была проблема, и в чем ее причина? Предложи варианты решения."
                         logger.info(f"Отправка запроса агенту о последнем алерте: {chat_request}")
                         
-                        response = agent.invoke({"messages": [("user", chat_request)]}, config=config)
+                        response = get_agent().invoke({"messages": [("user", chat_request)]}, config=config)
                         
                         if "output" in response:
                             bot_response = response["output"]
@@ -318,7 +333,7 @@ def chat(thread_id: str):
                             logger.info(f"Передаем боту текст {alert_number}-го алерта для анализа")
 
                             # Сохраняем информацию для последующего диалога
-                            agent.invoke({"messages": [("user", "Сохрани информацию о выбранном алерте:"), ("assistant", save_to_context)]}, config=config)
+                            get_agent().invoke({"messages": [("user", "Сохрани информацию о выбранном алерте:"), ("assistant", save_to_context)]}, config=config)
                             
                             # Возвращаем результат анализа
                             print("🤖 :", analysis_result)
@@ -352,9 +367,9 @@ def chat(thread_id: str):
                 logger.info(f"Отправка запроса агенту: {user_input}")
                 
                 try:
-                    # Сначала пробуем через agent.invoke
+                    # Сначала пробуем через get_agent().invoke
                     try:
-                        response = agent.invoke({"messages": [("user", user_input)]}, config=config)
+                        response = get_agent().invoke({"messages": [("user", user_input)]}, config=config)
                         
                         logger.info(f"Тип ответа: {type(response)}")
                         logger.info(f"Структура ответа: {list(response.keys()) if hasattr(response, 'keys') else 'не является словарем'}")
@@ -394,9 +409,9 @@ def chat(thread_id: str):
                             bot_response = str(response)
                             logger.info(f"Преобразован ответ неизвестного типа {type(response)} к строке")
                     except Exception as e:
-                        # Если не удалось получить ответ через agent.invoke, 
+                        # Если не удалось получить ответ через get_agent().invoke, 
                         # используем прямой вызов get_bot_response
-                        logger.warning(f"Ошибка при использовании agent.invoke: {str(e)}, пробуем прямой вызов get_bot_response")
+                        logger.warning(f"Ошибка при использовании get_agent().invoke: {str(e)}, пробуем прямой вызов get_bot_response")
                         
                         from src.core.agent import get_bot_response
                         bot_response = get_bot_response(user_input, max_tokens=800)

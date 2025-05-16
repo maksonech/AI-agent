@@ -1,5 +1,11 @@
 """Системные промпты для агента GigaChat."""
 
+import os
+import sys
+
+# Добавляем корневую директорию проекта в путь для импорта при прямом запуске файла
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
 from src.core.utils import courses_database  # Импортируем обработанный JSON с нашими курсами
 
 system_prompt = """Ты — умный ассистент GigaChat.

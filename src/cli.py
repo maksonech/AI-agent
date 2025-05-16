@@ -7,7 +7,7 @@ import argparse
 import os
 import sys
 import time
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 # Импортируем необходимые библиотеки для работы с конфигурацией
@@ -87,7 +87,7 @@ def run_interactive_mode() -> None:
     print("Запуск интерактивного режима AI-агента...")
     
     # Создаем уникальный идентификатор для сессии
-    session_id = datetime.now().strftime('session_%Y%m%d_%H%M%S')
+    session_id: str = datetime.now().strftime('session_%Y%m%d_%H%M%S')
     
     try:
         chat(session_id)
@@ -98,7 +98,7 @@ def run_interactive_mode() -> None:
         sys.exit(1)
 
 
-def run_single_analysis(file_path: str, output_path: str = None) -> None:
+def run_single_analysis(file_path: str, output_path: Optional[str] = None) -> None:
     """
     Выполняет анализ одного файла алерта и выводит результат.
     
@@ -124,9 +124,9 @@ def run_single_analysis(file_path: str, output_path: str = None) -> None:
         sys.exit(1)
     
     try:
-        start_time = time.time()
-        result = analyze_file_alert.invoke(file_path)
-        elapsed_time = time.time() - start_time
+        start_time: float = time.time()
+        result: str = analyze_file_alert.invoke(file_path)
+        elapsed_time: float = time.time() - start_time
         
         print(f"\n✅ Анализ успешно завершен за {elapsed_time:.2f} секунд\n")
         print("Результат анализа:")
@@ -150,7 +150,7 @@ def run_single_analysis(file_path: str, output_path: str = None) -> None:
         sys.exit(1)
 
 
-def run_batch_analysis(directory: str, pattern: str = "*.txt", threads: int = 4, output_path: str = None) -> None:
+def run_batch_analysis(directory: str, pattern: str = "*.txt", threads: int = 4, output_path: Optional[str] = None) -> None:
     """
     Выполняет пакетный анализ файлов алертов в многопоточном режиме.
     
@@ -174,7 +174,7 @@ def run_batch_analysis(directory: str, pattern: str = "*.txt", threads: int = 4,
     
     try:
         # Функция обратного вызова для отображения прогресса
-        def progress_callback(file_path, result, error):
+        def progress_callback(file_path: str, result: Optional[str], error: Optional[str]) -> None:
             file_name = os.path.basename(file_path)
             if error:
                 print(f"❌ Ошибка при обработке {file_name}: {error}")
@@ -182,13 +182,13 @@ def run_batch_analysis(directory: str, pattern: str = "*.txt", threads: int = 4,
                 print(f"✅ Успешно обработан {file_name}")
         
         # Запускаем обработку директории
-        start_time = time.time()
-        results = process_directory(directory, pattern, threads, progress_callback)
-        elapsed_time = time.time() - start_time
+        start_time: float = time.time()
+        results: Dict[str, Dict[str, Any]] = process_directory(directory, pattern, threads, progress_callback)
+        elapsed_time: float = time.time() - start_time
         
         # Выводим сводку
-        success_count = sum(1 for res in results.values() if res["status"] == "success")
-        error_count = sum(1 for res in results.values() if res["status"] == "error")
+        success_count: int = sum(1 for res in results.values() if res["status"] == "success")
+        error_count: int = sum(1 for res in results.values() if res["status"] == "error")
         
         print("\nСводка анализа:")
         print(f"Всего файлов: {len(results)}")
@@ -197,7 +197,7 @@ def run_batch_analysis(directory: str, pattern: str = "*.txt", threads: int = 4,
         print(f"Общее время: {elapsed_time:.2f} секунд")
         
         # Сохраняем результаты в файл
-        json_path = save_results_to_json(results, output_path)
+        json_path: Optional[str] = save_results_to_json(results, output_path)
         if json_path:
             print(f"\nРезультаты сохранены в: {json_path}")
         
@@ -222,7 +222,7 @@ def check_token_status() -> None:
     print("Проверка статуса токенов GigaChat...")
     
     try:
-        result = check_token_status.invoke("")
+        result: str = check_token_status.invoke("")
         print("\n" + result)
     except Exception as e:
         cli_logger.error(f"Ошибка при проверке статуса токенов: {str(e)}", exc_info=True)
@@ -248,18 +248,10 @@ def main() -> None:
     elif args.command == 'token-status':
         check_token_status()
     else:
+        print(f"Неизвестная команда: {args.command}")
         parser.print_help()
-        sys.exit(0)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\nОперация прервана пользователем.")
-        sys.exit(0)
-    except Exception as e:
-        cli_logger.critical(f"Необработанная ошибка: {str(e)}", exc_info=True)
-        print(f"\n❌ Критическая ошибка: {str(e)}")
-        print("Пожалуйста, проверьте лог-файлы для получения дополнительной информации.")
-        sys.exit(1) 
+    main() 
