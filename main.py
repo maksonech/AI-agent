@@ -1,4 +1,4 @@
-"""Главный модуль для взаимодействия с агентом GigaChat."""
+"""Главный модуль для взаимодействия с агентами."""
 
 # Импорты
 import os
@@ -6,21 +6,23 @@ import logging
 import sys
 from datetime import datetime
 
-# Проверяем доступность модели GigaChat перед импортом агента
+# Проверяем доступность модели GigaChat перед импортом агентов
 try:
-    from src.core.agent import model as gigachat_model
-    if gigachat_model is None:
+    from src.agents.alert_agent import get_alert_agent
+    from src.agents.assistant_agent import get_assistant_agent
+    
+    # Получаем экземпляры агентов для проверки инициализации
+    alert_agent = get_alert_agent()
+    assistant_agent = get_assistant_agent()
+    
+    if alert_agent.model is None or assistant_agent.model is None:
         print("⚠️ ОШИБКА: Модель GigaChat не инициализирована")
         logging.error("Модель GigaChat не инициализирована")
         sys.exit(1)
 except ImportError as e:
-    print(f"⚠️ ОШИБКА: Не удалось импортировать модель GigaChat: {str(e)}")
-    logging.error(f"Не удалось импортировать модель GigaChat: {str(e)}")
+    print(f"⚠️ ОШИБКА: Не удалось импортировать агентов: {str(e)}")
+    logging.error(f"Не удалось импортировать агентов: {str(e)}")
     sys.exit(1)
-
-# Импортируем функцию получения агента вместо прямого импорта
-from src.core.agent import get_agent
-import re
 
 # Пытаемся импортировать инструменты
 try:
@@ -42,11 +44,10 @@ from config.exceptions import (
     format_exception, safe_execute
 )
 
-
-# Основной цикл общения с агентом
+# Основной цикл общения с агентами
 def chat(thread_id: str):
     """
-    Основная функция для общения с агентом.
+    Основная функция для общения с агентами.
     """
     # Настройка логирования с помощью централизованной конфигурации
     logger = setup_chat_logger()
@@ -59,8 +60,10 @@ def chat(thread_id: str):
     alert_analyzed = False
     last_alert_file = ""
     
-    config = {"configurable": {"thread_id": thread_id}}
-    welcome_message = "Добро пожаловать в терминал общения с GigaChat!"
+    # Команды для выхода из программы
+    exit_commands = ["exit", "выход", "пока", "до свидания", "бб", "bye", "quit", "q", "досвидания", "закрыть"]
+    
+    welcome_message = "Добро пожаловать в терминал общения с AI-агентами!"
     instructions = """Напишите Ваш запрос или введите 'exit' для выхода.
     
 📄 Для анализа файлов с алертами введите 'файл' или 'анализ файла алерта'
@@ -79,7 +82,7 @@ def chat(thread_id: str):
             user_input = input("\n>>: ")
             logger.info(f"Пользователь: {user_input}")
             
-            if user_input.lower() == "exit":
+            if user_input.lower() in exit_commands:
                 farewell_message = "До свидания!"
                 print(farewell_message)
                 logger.info(f"Бот: {farewell_message}")
@@ -88,15 +91,16 @@ def chat(thread_id: str):
             
             # Проверяем, если пользователь хочет узнать статус токенов GigaChat
             if user_input.lower() in ["токены", "проверить токены", "статус токенов", "токен", "проверить токен"]:
-                logger.info("Прямой вызов функции check_token_status без использования агента")
+                logger.info("Прямой вызов функции check_token_status")
                 
                 def check_token_handler():
                     print("\n🔑 Проверка статуса токенов GigaChat:")
                     logger.info("Запрос информации о статусе токенов GigaChat")
                     
-                    result = check_token_status.invoke("")
+                    # Используем интерактивного ассистента для проверки токенов
+                    result = assistant_agent.check_api_endpoint("token status")
                     print("🤖 :", result)
-                    logger.info(f"Бот (прямой вызов check_token_status): результат получен")
+                    logger.info(f"Бот (проверка токенов): результат получен")
                 
                 # Используем safe_execute для безопасного выполнения функции
                 result = safe_execute(
@@ -114,7 +118,7 @@ def chat(thread_id: str):
             # Проверяем, если пользователь хочет проанализировать файл алерта
             if user_input.lower() in ["проанализировать алерт из файла", "анализ файла алерта",
                                       "анализ алерта", "алерт", "файл"]:
-                logger.info("Прямой вызов функции analyze_file_alert без использования агента")
+                logger.info("Запрос на анализ файла алерта")
                 
                 def analyze_alert_handler():
                     # Предлагаем пользователю выбрать файл алерта
@@ -123,9 +127,8 @@ def chat(thread_id: str):
                     print(f"\n📄 Анализ файла: {os.path.basename(selected_file)}")
                     logger.info(f"Выбран файл для анализа: {selected_file}")
                     
-                    # Используем прямую функцию вместо инструмента LangChain
-                    from src.tools.alert_tools import analyze_file_alert as analyze_file_alert_func
-                    result = analyze_file_alert_func(file_path=selected_file)
+                    # Используем агент анализа алертов
+                    result = alert_agent.analyze_alert_file(selected_file)
                     
                     # Читаем оригинальный текст алерта для сохранения
                     original_alert_text = ""
@@ -139,26 +142,6 @@ def chat(thread_id: str):
                         error = FileOperationError(f"Ошибка при чтении оригинального алерта: {str(e)}")
                         logger.error(format_exception(error))
                         original_alert_text = "Текст алерта не удалось прочитать"
-                    
-                    # Сохраняем анализ алерта в контексте диалога для дальнейшего взаимодействия
-                    save_to_context = f"""Я проанализировал алерт из файла {os.path.basename(selected_file)}. 
-
-Оригинальный текст алерта:
-```
-{original_alert_text}
-```
-
-Результат анализа:
-{result}"""
-                    
-                    # Добавляем результат анализа в историю диалога
-                    try:
-                        response = get_agent().invoke({"messages": [("user", "Сохрани информацию о проанализированном алерте:"), ("assistant", save_to_context)]}, config=config)
-                        logger.info("Результат анализа алерта сохранен в истории диалога с ботом")
-                        print("📋 Информация об алерте сохранена в памяти бота. Вы можете задавать вопросы по этому алерту.")
-                    except Exception as e:
-                        logger.error(f"Ошибка при сохранении анализа алерта в истории диалога: {str(e)}", exc_info=True)
-                        print("⚠️ Не удалось сохранить информацию об алерте в памяти бота.")
                     
                     print("🤖 :", result)
                     return result
@@ -184,38 +167,10 @@ def chat(thread_id: str):
                     def reanalyze_alert_handler():
                         print(f"\n📄 Повторный анализ файла: {os.path.basename(last_alert_file)}")
                         
-                        result = analyze_file_alert.invoke(last_alert_file)
+                        # Используем агент анализа алертов для повторного анализа
+                        result = alert_agent.analyze_alert_file(last_alert_file)
                         print("🤖 :", result)
-                        logger.info(f"Бот (повторный вызов): {result}")
-                        
-                        # Обновляем сохраненную информацию об алерте
-                        try:
-                            with open(last_alert_file, 'r', encoding='utf-8') as alert_file:
-                                original_alert_text = alert_file.read()
-                        except Exception as e:
-                            error = FileOperationError(f"Ошибка при чтении оригинального алерта: {str(e)}")
-                            logger.error(format_exception(error))
-                            original_alert_text = "Текст алерта не удалось прочитать"
-                        
-                        # Сохраняем обновленный анализ алерта в контексте диалога
-                        save_to_context = f"""Я повторно проанализировал алерт из файла {os.path.basename(last_alert_file)}. 
-
-Оригинальный текст алерта:
-```
-{original_alert_text}
-```
-
-Результат анализа:
-{result}"""
-                        
-                        # Добавляем результат анализа в историю диалога
-                        try:
-                            response = get_agent().invoke({"messages": [("user", "Сохрани обновленную информацию о проанализированном алерте:"), ("assistant", save_to_context)]}, config=config)
-                            logger.info("Обновленный результат анализа алерта сохранен в истории диалога с ботом")
-                            print("📋 Обновленная информация об алерте сохранена в памяти бота.")
-                        except Exception as e:
-                            logger.error(f"Ошибка при сохранении обновленного анализа алерта в истории диалога: {str(e)}", exc_info=True)
-                            print("⚠️ Не удалось сохранить обновленную информацию об алерте в памяти бота.")
+                        logger.info(f"Бот (повторный анализ): результат получен")
                         
                         return result
                     
@@ -241,31 +196,30 @@ def chat(thread_id: str):
                 logger.info("Пользователь запрашивает информацию о последнем проанализированном алерте")
                 if alert_analyzed:
                     def get_alert_info_handler():
-                        chat_request = f"Расскажи мне подробнее о проанализированном алерте. Какая была проблема, и в чем ее причина? Предложи варианты решения."
-                        logger.info(f"Отправка запроса агенту о последнем алерте: {chat_request}")
+                        # Читаем содержимое файла с последним алертом
+                        try:
+                            with open(last_alert_file, 'r', encoding='utf-8') as file:
+                                alert_text = file.read()
+                        except Exception as e:
+                            error = FileOperationError(f"Ошибка при чтении файла алерта: {str(e)}")
+                            logger.error(format_exception(error))
+                            return f"❌ Не удалось прочитать файл с алертом: {str(e)}"
                         
-                        response = get_agent().invoke({"messages": [("user", chat_request)]}, config=config)
-                        
-                        if "output" in response:
-                            bot_response = response["output"]
-                            print("🤖 :", bot_response)
-                            logger.info(f"Бот: {bot_response}")
-                            return bot_response
-                        else:
-                            error_message = "Не удалось получить ответ от бота о последнем алерте"
-                            logger.warning(error_message)
-                            raise AIAgentError(error_message)
+                        # Формируем запрос к агенту анализа алертов
+                        result = alert_agent.analyze_alert(alert_text)
+                        print("🤖 :", result)
+                        return result
                     
                     # Используем safe_execute для безопасного выполнения функции
                     result = safe_execute(
                         get_alert_info_handler,
-                        error_message="Ошибка при запросе информации о последнем алерте",
+                        error_message="Ошибка при получении информации о последнем алерте",
                         logger=logger,
-                        expected_exceptions=[AIAgentError]
+                        expected_exceptions=[FileOperationError, DataProcessingError]
                     )
                     
                     if isinstance(result, str) and result.startswith("❌"):
-                        print("🤖 : Извините, не удалось получить ответ от бота.")
+                        print("🤖 :", result)
                         
                     continue
                 else:
@@ -273,264 +227,112 @@ def chat(thread_id: str):
                     logger.info("Запрос информации о последнем алерте отклонен - алерт не был проанализирован")
                     continue
             
-            # Проверяем запрос на анализ конкретного алерта по номеру (например, "2 алерт")
-            alert_number_match = re.match(r'^\s*(\d+)\s+алерт', user_input.lower())
-            if alert_number_match:
-                alert_number = int(alert_number_match.group(1))
-                logger.info(f"Пользователь запрашивает информацию о конкретном алерте по номеру: {alert_number}")
+            # Для всех остальных запросов используем интерактивного ассистента
+            def chat_with_assistant_handler():
+                logger.info(f"Обработка запроса пользователя интерактивным ассистентом: {user_input[:50]}...")
                 
-                if alert_analyzed and last_alert_file:
-                    def get_specific_alert_handler():
-                        try:
-                            # Используем прямой вызов функции analyze_file_alert с указанием номера алерта
-                            from src.tools.alert_tools import analyze_file_alert as analyze_file_alert_func
-                            logger.info(f"Прямой вызов analyze_file_alert с номером алерта {alert_number}")
-                            analysis_result = analyze_file_alert_func(file_path=last_alert_file, alert_number=alert_number)
-                            
-                            # Проверяем результат - если это строка с сообщением об ошибке
-                            if analysis_result.startswith("В файле") and "Нет алерта с номером" in analysis_result:
-                                return analysis_result
-                            
-                            # Получаем имя файла для сообщения
-                            basename = os.path.basename(last_alert_file)
-                            
-                            # Читаем содержимое файла для выделения конкретного алерта
-                            with open(last_alert_file, 'r', encoding='utf-8') as f:
-                                all_alerts_text = f.read()
-                                
-                            # Используем более точный паттерн для разделения алертов
-                            alert_starts = re.finditer(r'(?:^|\n)(?:ПРОМ|PROM|DEV) \|', all_alerts_text)
-                            alert_positions = [match.start() for match in alert_starts]
-                            
-                            # Если не найдено ни одного алерта с префиксом, проверяем альтернативные паттерны
-                            if not alert_positions:
-                                alt_alert_starts = re.finditer(r'(?:^|\n)АС Рефлекс', all_alerts_text)
-                                alert_positions = [match.start() for match in alt_alert_starts]
-                            
-                            # Делим текст на отдельные алерты
-                            alerts = []
-                            for i in range(len(alert_positions)):
-                                start = alert_positions[i]
-                                end = alert_positions[i+1] if i < len(alert_positions) - 1 else len(all_alerts_text)
-                                alert_content = all_alerts_text[start:end].strip()
-                                alerts.append(alert_content)
-                            
-                            # Проверяем корректность номера алерта - для сохранения контекста
-                            if alert_number <= 0 or alert_number > len(alerts):
-                                return f"В файле {basename} содержится {len(alerts)} алертов. Нет алерта с номером {alert_number}."
-                            
-                            # Получаем текст нужного алерта
-                            specific_alert_text = alerts[alert_number - 1]
-                            
-                            # Сохраняем выбранный алерт в память бота для последующего анализа
-                            save_to_context = f"""Я проанализировал алерт #{alert_number} из файла {basename}. 
-
-Оригинальный текст алерта:
-```
-{specific_alert_text}
-```
-"""
-                            logger.info(f"Передаем боту текст {alert_number}-го алерта для анализа")
-
-                            # Сохраняем информацию для последующего диалога
-                            get_agent().invoke({"messages": [("user", "Сохрани информацию о выбранном алерте:"), ("assistant", save_to_context)]}, config=config)
-                            
-                            # Возвращаем результат анализа
-                            print("🤖 :", analysis_result)
-                            return analysis_result
-                        except Exception as e:
-                            error_message = f"Ошибка при обработке алерта номер {alert_number}: {str(e)}"
-                            logger.error(error_message, exc_info=True)
-                            raise AIAgentError(error_message)
-                    
-                    # Используем safe_execute для безопасного выполнения функции
-                    result = safe_execute(
-                        get_specific_alert_handler,
-                        error_message=f"Ошибка при запросе информации об алерте номер {alert_number}",
-                        logger=logger,
-                        expected_exceptions=[AIAgentError, FileOperationError, Exception]
-                    )
-                    
-                    if isinstance(result, str) and result.startswith("❌"):
-                        print("🤖 : Извините, не удалось получить ответ от бота.")
-                        print(f"Подробности ошибки: {result}")
-                        logger.error(f"Ошибка при запросе алерта номер {alert_number}: {result}")
-                    
-                    continue
-                else:
-                    print("🤖 : Вы еще не анализировали ни одного алерта в этой сессии. Введите 'файл' или 'анализ файла алерта' для начала анализа.")
-                    logger.info("Запрос информации о конкретном алерте отклонен - алерт не был проанализирован")
-                    continue
-            
-            # Обычный запрос к агенту
-            def chat_with_agent_handler():
-                logger.info(f"Отправка запроса агенту: {user_input}")
+                # Используем интерактивного ассистента для обработки запроса
+                result = assistant_agent.process_request(user_input, thread_id)
+                print("🤖 :", result)
+                logger.info(f"Бот: ответ получен длиной {len(result)} символов")
                 
-                try:
-                    # Сначала пробуем через get_agent().invoke
-                    try:
-                        response = get_agent().invoke({"messages": [("user", user_input)]}, config=config)
-                        
-                        logger.info(f"Тип ответа: {type(response)}")
-                        logger.info(f"Структура ответа: {list(response.keys()) if hasattr(response, 'keys') else 'не является словарем'}")
-                        
-                        # Пытаемся извлечь ответ из response
-                        if isinstance(response, str):
-                            bot_response = response
-                            logger.info("Ответ получен в виде строки")
-                        elif isinstance(response, dict):
-                            if "output" in response:
-                                bot_response = response["output"]
-                                logger.info("Ответ получен из поля 'output'")
-                            elif "messages" in response:
-                                logger.info("Ответ содержит список сообщений")
-                                bot_messages = [msg for msg in response["messages"] if hasattr(msg, "content") and isinstance(msg.content, str) and len(msg.content.strip()) > 0]
-                                if bot_messages:
-                                    bot_response = bot_messages[-1].content
-                                    logger.info(f"Извлечено последнее сообщение из списка, длина: {len(bot_response)}")
-                                else:
-                                    raise ValueError("Не найдено текстовых сообщений в ответе")
-                            else:
-                                # Если не удалось извлечь ответ стандартными способами, проверяем все поля
-                                text_fields = {}
-                                for key, value in response.items():
-                                    if isinstance(value, str) and len(value) > 10:
-                                        text_fields[key] = value
-                                        
-                                if text_fields:
-                                    # Берем самое длинное текстовое поле
-                                    field_key = max(text_fields.items(), key=lambda x: len(x[1]))[0]
-                                    bot_response = text_fields[field_key]
-                                    logger.info(f"Используем поле '{field_key}' в качестве ответа, длина: {len(bot_response)}")
-                                else:
-                                    raise ValueError("Не найдено подходящих текстовых полей в ответе")
-                        else:
-                            # Если тип ответа не str и не dict, пробуем преобразовать к строке
-                            bot_response = str(response)
-                            logger.info(f"Преобразован ответ неизвестного типа {type(response)} к строке")
-                    except Exception as e:
-                        # Если не удалось получить ответ через get_agent().invoke, 
-                        # используем прямой вызов get_bot_response
-                        logger.warning(f"Ошибка при использовании get_agent().invoke: {str(e)}, пробуем прямой вызов get_bot_response")
-                        
-                        from src.core.agent import get_bot_response
-                        bot_response = get_bot_response(user_input, max_tokens=800)
-                        logger.info(f"Получен ответ через прямой вызов get_bot_response, длина: {len(bot_response)}")
-                    
-                    print("🤖 :", bot_response)
-                    logger.info(f"Бот: {bot_response[:100]}...")
-                    return bot_response
-                except Exception as e:
-                    error_message = f"Ошибка при обработке запроса: {str(e)}"
-                    logger.error(error_message, exc_info=True)
-                    raise AIAgentError(error_message)
+                return result
             
             # Используем safe_execute для безопасного выполнения функции
             result = safe_execute(
-                chat_with_agent_handler,
+                chat_with_assistant_handler,
                 error_message="Ошибка при обработке запроса",
                 logger=logger,
                 expected_exceptions=[AIAgentError]
             )
             
             if isinstance(result, str) and result.startswith("❌"):
-                print("🤖 : Извините, не удалось получить ответ от бота.")
+                print("🤖 :", result)
                 
         except KeyboardInterrupt:
-            logger.info("Пользователь прервал выполнение с помощью Ctrl+C")
-            print("\n\nПрограмма завершена пользователем.")
-            break
+            print("\n🤖 : Прервано пользователем. Для выхода введите 'exit'.")
+            logger.info("Прервано пользователем (KeyboardInterrupt)")
         except Exception as e:
-            error_msg = f"Критическая ошибка в главном цикле: {str(e)}"
+            error_msg = f"Непредвиденная ошибка: {str(e)}"
+            print(f"🤖 : {error_msg}")
             logger.error(error_msg, exc_info=True)
-            print(f"\n\nКритическая ошибка: {str(e)}")
-            print("Попробуйте снова или перезапустите программу.")
-
 
 def select_alert_file():
     """
-    Функция для выбора файла алерта для анализа.
+    Функция для выбора файла алерта из доступных.
     
     Returns:
-        str: Путь к выбранному файлу.
-        
-    Raises:
-        FileOperationError: Если возникла ошибка при работе с файлами алертов
+        str: Путь к выбранному файлу алерта
     """
-    project_dir = os.path.dirname(os.path.abspath(__file__))
-    settings = get_settings()
-    
-    # Получаем путь к директории с тестовыми алертами
-    alerts_dir = os.path.join(project_dir, 'tests', 'fixtures')
-    
-    # Проверяем существование директории
-    if not os.path.exists(alerts_dir):
-        error_message = f"Директория с алертами не найдена: {alerts_dir}"
-        logger.error(error_message)
-        raise FileOperationError(error_message)
-    
-    # Получаем список всех файлов .txt в директории tests/fixtures
-    alert_files_dict = {}
-    alert_file_index = 1
-    
     try:
-        for filename in sorted(os.listdir(alerts_dir)):
-            if filename.endswith('.txt'):
-                file_path = os.path.join(alerts_dir, filename)
-                # Определяем тип алерта на основе имени файла
-                file_type = "Стандартный алерт"
-                if "multiple" in filename:
-                    file_type = "Множественные алерты"
-                elif "problematic" in filename:
-                    file_type = "Проблемный алерт"
-                elif "three" in filename:
-                    file_type = "Три алерта"
-                elif "sample" in filename:
-                    file_type = "Образец алерта"
+        # Получаем путь к директории с файлами алертов
+        test_alerts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tests', 'fixtures')
+        data_alerts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'alerts')
+        
+        # Создаем директорию для алертов, если она не существует
+        os.makedirs(data_alerts_dir, exist_ok=True)
+        
+        # Список директорий для поиска файлов алертов
+        alert_dirs = []
+        
+        # Добавляем директории, если они существуют
+        if os.path.exists(test_alerts_dir):
+            alert_dirs.append(test_alerts_dir)
+        if os.path.exists(data_alerts_dir):
+            alert_dirs.append(data_alerts_dir)
+        
+        if not alert_dirs:
+            raise FileOperationError("Не найдены директории с файлами алертов")
+        
+        # Собираем все файлы из всех директорий
+        all_files = []
+        for directory in alert_dirs:
+            files = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
+            text_files = [f for f in files if f.endswith(('.txt', '.log', '.json'))]
+            all_files.extend([(f, directory) for f in text_files])
+        
+        if not all_files:
+            # Создаем пример файла с алертом, если нет ни одного файла
+            sample_file = os.path.join(data_alerts_dir, "sample_alert.txt")
+            with open(sample_file, 'w', encoding='utf-8') as f:
+                f.write("""ALERT: High CPU Usage
+Service: api-gateway
+Severity: Critical
+Time: 2023-05-15 14:32:45
+Metrics: CPU: 95%, Memory: 87%
+Details: The API Gateway service has been experiencing high CPU usage for the last 15 minutes.
+""")
+            all_files = [("sample_alert.txt", data_alerts_dir)]
+        
+        # Выводим список файлов для выбора
+        print("\nДоступные файлы с алертами:")
+        for i, (file, directory) in enumerate(all_files, 1):
+            print(f"{i}. {file} ({os.path.basename(directory)})")
+        
+        # Запрашиваем выбор пользователя
+        while True:
+            try:
+                choice = input("\nВыберите номер файла (или введите 'q' для отмены): ")
                 
-                alert_files_dict[str(alert_file_index)] = {
-                    'name': file_type,
-                    'path': file_path
-                }
-                alert_file_index += 1
+                if choice.lower() == 'q':
+                    raise KeyboardInterrupt("Выбор файла отменен пользователем")
+                
+                index = int(choice) - 1
+                if 0 <= index < len(all_files):
+                    selected_file, directory = all_files[index]
+                    return os.path.join(directory, selected_file)
+                else:
+                    print("❌ Некорректный номер. Пожалуйста, выберите номер из списка.")
+            except ValueError:
+                print("❌ Пожалуйста, введите число или 'q' для отмены.")
     except Exception as e:
-        error_message = f"Ошибка при чтении директории с алертами: {str(e)}"
+        error_message = f"Ошибка при выборе файла алерта: {str(e)}"
         logger.error(error_message)
         raise FileOperationError(error_message)
-    
-    # Проверяем, что найдены файлы алертов
-    if not alert_files_dict:
-        error_message = f"В директории {alerts_dir} не найдены файлы алертов с расширением .txt"
-        logger.error(error_message)
-        raise FileOperationError(error_message)
-    
-    print("\nВыберите файл с алертом для анализа:")
-    for key, file_info in alert_files_dict.items():
-        print(f"{key}. {file_info['name']} ({os.path.basename(file_info['path'])})")
-    
-    while True:
-        choice = input(f"\nВведите номер файла (1-{len(alert_files_dict)}) или нажмите Enter для стандартного алерта: ")
-        
-        if not choice:  # Если пустой ввод, используем первый файл в списке
-            return alert_files_dict['1']['path']
-        
-        if choice in alert_files_dict:
-            return alert_files_dict[choice]['path']
-        else:
-            print(f"❌ Некорректный выбор. Пожалуйста, введите число от 1 до {len(alert_files_dict)}.")
-
 
 if __name__ == "__main__":
-    print("Запуск AI-агента для анализа алертов...")
-    
     # Создаем уникальный идентификатор для сессии
-    session_id = datetime.now().strftime('session_%Y%m%d_%H%M%S')
+    thread_id = datetime.now().strftime('session_%Y%m%d_%H%M%S')
     
-    try:
-        chat(session_id)
-    except Exception as e:
-        # Получаем и настраиваем логгер для критических ошибок
-        logger = setup_chat_logger()
-        logger.critical(f"Критическая ошибка при запуске приложения: {str(e)}", exc_info=True)
-        print(f"\n\nКритическая ошибка при запуске приложения: {str(e)}")
-        print("Пожалуйста, проверьте логи для получения дополнительной информации.")
+    # Запускаем основной цикл общения с агентами
+    chat(thread_id)

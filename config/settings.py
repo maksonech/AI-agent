@@ -39,7 +39,7 @@ DEFAULT_SETTINGS = {
     "gigachat_model": "GigaChat-2",
     "gigachat_auth_url": "https://gigachat.devices.sberbank.ru/api/v1/oauth/token",
     "gigachat_info_url": "https://gigachat.devices.sberbank.ru/api/v1/accounts/info",
-    "default_alert_file": "tests/fixtures/sample_alert.txt",
+    "default_alert_file": "sample_alert.txt",
     "default_max_tokens": 800
 }
 
@@ -206,23 +206,58 @@ def get_alert_file_path(filename: Optional[str] = None) -> str:
         settings = get_settings()
         filename = settings.get("default_alert_file", "sample_alert.txt")
     
-    # Если путь уже абсолютный, возвращаем его как есть
+    # Нормализуем имя файла (заменяем обратные слеши на прямые)
+    filename = filename.replace('\\', '/')
+    
+    # Если путь уже абсолютный, проверяем его напрямую
     if os.path.isabs(filename):
         result_path = filename
-    else:
-        # Если путь относительный и начинается с "tests/fixtures/"
-        if filename.startswith("tests/fixtures/"):
-            filename = filename[14:]  # Убираем префикс "tests/fixtures/"
-        
-        result_path = os.path.join(TEST_ALERTS_DIR, filename)
+        if os.path.exists(result_path):
+            return result_path
+        # Если абсолютный путь не существует, продолжаем поиск в других местах
     
-    # Проверяем существование файла
-    if not os.path.exists(result_path):
-        error_message = f"Файл алерта не найден: {result_path}"
-        logger.error(error_message)
-        raise FileOperationError(error_message)
+    # Проверяем в директории тестовых алертов
+    test_path = os.path.join(TEST_ALERTS_DIR, os.path.basename(filename))
+    if os.path.exists(test_path):
+        return test_path
     
-    return result_path
+    # Проверяем в директории данных
+    alerts_dir = os.path.join(DATA_DIR, "alerts")
+    os.makedirs(alerts_dir, exist_ok=True)
+    data_path = os.path.join(alerts_dir, os.path.basename(filename))
+    if os.path.exists(data_path):
+        return data_path
+    
+    # Проверяем в корневой директории проекта
+    root_path = os.path.join(APP_ROOT, os.path.basename(filename))
+    if os.path.exists(root_path):
+        return root_path
+    
+    # Если файл не найден нигде, создаем пример файла с алертом
+    try:
+        # Создаем пример файла с алертом
+        sample_file = os.path.join(alerts_dir, "sample_alert.txt")
+        if not os.path.exists(sample_file):
+            with open(sample_file, 'w', encoding='utf-8') as f:
+                f.write("""ALERT: High CPU Usage
+Service: api-gateway
+Severity: Critical
+Time: 2023-05-15 14:32:45
+Metrics: CPU: 95%, Memory: 87%
+Details: The API Gateway service has been experiencing high CPU usage for the last 15 minutes.
+""")
+            logger.info(f"Создан пример файла с алертом: {sample_file}")
+            
+            # Если запрошен был именно sample_alert.txt, возвращаем его
+            if os.path.basename(filename) == "sample_alert.txt":
+                return sample_file
+    except Exception as e:
+        logger.warning(f"Не удалось создать пример файла с алертом: {str(e)}")
+    
+    # Если файл не найден нигде
+    error_message = f"Файл алерта не найден: {filename}"
+    logger.error(error_message)
+    raise FileOperationError(error_message)
 
 def get_log_file_path(log_type: str, timestamp: Optional[str] = None) -> str:
     """
