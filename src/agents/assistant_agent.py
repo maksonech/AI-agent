@@ -135,15 +135,45 @@ class AssistantAgent:
                 assistant_logger.info(f"Запрос на анализ алерта перенаправлен специализированному агенту: {user_input[:50]}...")
                 return self._redirect_to_alert_agent(user_input)
             
+            # Проверяем наличие URL-подобных паттернов в запросе
+            # Если запрос содержит путь (начинается с /) и это не просто слово с /
+            url_pattern_found = False
+            url_part = None
+            
+            # Ищем URL-подобные паттерны в запросе
+            if "/" in user_input:
+                # Простой алгоритм извлечения URL-подобного паттерна
+                for part in user_input.split():
+                    if part.startswith("/") and part.count("/") >= 2:
+                        url_pattern_found = True
+                        url_part = part
+                        break
+                    elif "/" in part and not part.startswith("/") and len(part) > 3:
+                        # Проверяем, что это не просто слово с /
+                        if part.count("/") >= 2 or any(c.isdigit() for c in part):
+                            url_pattern_found = True
+                            url_part = "/" + part.split("/", 1)[1]
+                            break
+            
+            # Если найден URL-подобный паттерн, ищем информацию о нем
+            if url_pattern_found and url_part:
+                assistant_logger.info(f"Обнаружен URL-подобный паттерн: {url_part}")
+                return search_endpoint_tool.func(url_part)
+            
+            # Проверяем, не является ли запрос запросом на поиск информации о ссылке или API
+            if any(pattern in user_input.lower() for pattern in ["что за ссылка", "что за api", "что за эндпоинт", "информация о ссылке", "api endpoint", "расскажи про /"]):
+                assistant_logger.info(f"Запрос на поиск информации о ссылке или API: {user_input[:50]}...")
+                return search_endpoint_tool.func(user_input)
+            
             # Проверяем, не является ли запрос запросом на поиск термина в глоссарии
             if any(pattern in user_input.lower() for pattern in ["что такое", "что означает", "значение термина", "определение"]):
                 assistant_logger.info(f"Запрос на поиск термина в глоссарии: {user_input[:50]}...")
                 return search_glossary_tool.func(user_input)
             
-            # Проверяем, не является ли запрос запросом на поиск информации о ссылке или API
-            if any(pattern in user_input.lower() for pattern in ["что за ссылка", "что за api", "что за эндпоинт", "информация о ссылке", "api endpoint"]):
-                assistant_logger.info(f"Запрос на поиск информации о ссылке или API: {user_input[:50]}...")
-                return search_endpoint_tool.func(user_input)
+            # Проверяем запрос "что это" только если в нем нет URL-подобных паттернов
+            if "что это" in user_input.lower() and not url_pattern_found:
+                assistant_logger.info(f"Запрос на поиск термина в глоссарии: {user_input[:50]}...")
+                return search_glossary_tool.func(user_input)
             
             # Получаем агента
             agent = self.get_agent()
