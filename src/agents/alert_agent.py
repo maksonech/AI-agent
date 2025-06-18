@@ -156,9 +156,40 @@ class AlertAnalysisAgent:
             if not os.path.exists(file_path):
                 raise FileOperationError(f"Файл не найден: {file_path}")
             
-            # Читаем содержимое файла
-            with open(file_path, 'r', encoding='utf-8') as file:
-                alert_text = file.read()
+            # Пробуем различные кодировки для чтения файла
+            encodings = ['utf-8', 'cp1251', 'utf-16', 'utf-16-le', 'utf-16-be', 'latin1']
+            alert_text = None
+            
+            for encoding in encodings:
+                try:
+                    with open(file_path, 'r', encoding=encoding) as file:
+                        alert_text = file.read()
+                    alert_agent_logger.info(f"Файл успешно прочитан с кодировкой: {encoding}")
+                    break
+                except UnicodeDecodeError:
+                    continue
+            
+            # Если не удалось прочитать файл ни в одной кодировке, пробуем бинарное чтение
+            if alert_text is None:
+                try:
+                    with open(file_path, 'rb') as file:
+                        binary_data = file.read()
+                        # Пробуем определить кодировку по BOM
+                        if binary_data.startswith(b'\xff\xfe'):
+                            alert_text = binary_data.decode('utf-16-le')
+                        elif binary_data.startswith(b'\xfe\xff'):
+                            alert_text = binary_data.decode('utf-16-be')
+                        elif binary_data.startswith(b'\xef\xbb\xbf'):
+                            alert_text = binary_data.decode('utf-8-sig')
+                        else:
+                            # Последняя попытка - декодирование как latin1 (всегда работает)
+                            alert_text = binary_data.decode('latin1')
+                    alert_agent_logger.info("Файл успешно прочитан с бинарным определением кодировки")
+                except Exception as e:
+                    raise FileOperationError(f"Не удалось прочитать файл ни в одной кодировке: {str(e)}")
+            
+            if not alert_text:
+                raise FileOperationError("Файл пуст или не удалось определить кодировку")
             
             # Анализируем алерт
             return self.analyze_alert(alert_text)
