@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 from src.core.prompts import system_prompt  # Изменено с Source на src
+from src.core.utils import initialize_gigachat_model
 
 # Импортируем инструменты из новой модульной структуры
 try:
@@ -42,13 +43,8 @@ settings: Dict[str, Any] = get_settings()
 credentials_manager: CredentialsManager = CredentialsManager(load_from_env=True)
 gigachat_credentials: Dict[str, Any] = credentials_manager.get_gigachat_credentials()
 
-# Инициализация модели GigaChat с настройками из централизованной конфигурации
-model: GigaChat = GigaChat(
-    model=settings.get("gigachat_model", "GigaChat-2"),
-    credentials=gigachat_credentials.get("credentials"),
-    scope=gigachat_credentials.get("scope"),
-    verify_ssl_certs=gigachat_credentials.get("verify_ssl_certs", False)
-)
+# Инициализация модели GigaChat с использованием централизованной функции
+model: GigaChat = initialize_gigachat_model()
 
 # Настройка логгера для агента
 agent_logger = setup_tool_logger("agent")

@@ -36,7 +36,6 @@ DEFAULT_SETTINGS = {
     "course_data_path": "Data/integration_endpoints.json",
     "glossary_data_path": "Data/architect_glossary.json",
     "default_similarity_threshold": 0.3,
-    "gigachat_model": "GigaChat-2",
     "gigachat_auth_url": "https://gigachat.devices.sberbank.ru/api/v1/oauth/token",
     "gigachat_info_url": "https://gigachat.devices.sberbank.ru/api/v1/accounts/info",
     "default_alert_file": "sample_alert.txt",

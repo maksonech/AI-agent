@@ -15,6 +15,9 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 
+# Импортируем утилиты для централизованной инициализации модели
+from src.core.utils import initialize_gigachat_model
+
 # Импортируем конфигурационные модули
 try:
     from config import get_settings, CredentialsManager
@@ -72,17 +75,8 @@ class AssistantAgent:
         # Загрузка настроек
         self.settings = get_settings()
         
-        # Инициализация менеджера учетных данных
-        credentials_manager = CredentialsManager(load_from_env=True)
-        gigachat_credentials = credentials_manager.get_gigachat_credentials()
-        
-        # Инициализация модели GigaChat
-        self.model = GigaChat(
-            model=self.settings.get("gigachat_model", "GigaChat-2"),
-            credentials=gigachat_credentials.get("credentials"),
-            scope=gigachat_credentials.get("scope"),
-            verify_ssl_certs=gigachat_credentials.get("verify_ssl_certs", False)
-        )
+        # Инициализация модели GigaChat с использованием централизованной функции
+        self.model = initialize_gigachat_model()
         
         # Инициализация агента с инструментами
         self.agent = None
