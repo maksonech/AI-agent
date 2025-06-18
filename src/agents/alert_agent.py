@@ -135,11 +135,11 @@ class AlertAnalysisAgent:
             response = self.model.invoke(messages)
             alert_agent_logger.info(f"Получен анализ алерта длиной {len(response.content)} символов")
             
-            return response.content
+            return self._add_model_info(response.content)
         except Exception as e:
             error_msg = f"Ошибка при анализе алерта: {str(e)}"
             alert_agent_logger.error(error_msg, exc_info=True)
-            return f"❌ {error_msg}"
+            return self._add_model_info(f"❌ {error_msg}")
     
     def analyze_alert_file(self, file_path: str) -> str:
         """
@@ -196,7 +196,7 @@ class AlertAnalysisAgent:
         except Exception as e:
             error_msg = f"Ошибка при анализе файла алерта: {str(e)}"
             alert_agent_logger.error(error_msg, exc_info=True)
-            return f"❌ {error_msg}"
+            return self._add_model_info(f"❌ {error_msg}")
     
     def find_solution(self, alert_text: str, additional_context: Optional[str] = None) -> str:
         """
@@ -229,11 +229,29 @@ class AlertAnalysisAgent:
             response = self.model.invoke(messages)
             alert_agent_logger.info(f"Получено решение для алерта длиной {len(response.content)} символов")
             
-            return response.content
+            return self._add_model_info(response.content)
         except Exception as e:
             error_msg = f"Ошибка при поиске решения: {str(e)}"
             alert_agent_logger.error(error_msg, exc_info=True)
-            return f"❌ {error_msg}"
+            return self._add_model_info(f"❌ {error_msg}")
+    
+    def _add_model_info(self, response: str) -> str:
+        """
+        Добавляет информацию о модели GigaChat к ответу.
+        
+        Args:
+            response: Исходный ответ
+            
+        Returns:
+            Ответ с добавленной информацией о модели
+        """
+        if response:
+            # Добавляем информацию в конец ответа
+            from config.settings import get_settings
+            settings = get_settings()
+            model_name = settings.get("gigachat_model", "GigaChat")
+            return f"{response}\n\n_Ответ сформирован с помощью модели {model_name}_"
+        return response
 
 # Создаем глобальный экземпляр агента для анализа алертов
 alert_agent = AlertAnalysisAgent()

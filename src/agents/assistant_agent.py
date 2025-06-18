@@ -133,7 +133,7 @@ class AssistantAgent:
             # Проверяем, не является ли запрос запросом на анализ алерта
             if any(keyword in user_input.lower() for keyword in ["алерт", "alert", "анализ", "проблема"]):
                 assistant_logger.info(f"Запрос на анализ алерта перенаправлен специализированному агенту: {user_input[:50]}...")
-                return self._redirect_to_alert_agent(user_input)
+                return self._add_model_info(self._redirect_to_alert_agent(user_input))
             
             # Проверяем наличие URL-подобных паттернов в запросе
             # Если запрос содержит путь (начинается с /) и это не просто слово с /
@@ -158,22 +158,22 @@ class AssistantAgent:
             # Если найден URL-подобный паттерн, ищем информацию о нем
             if url_pattern_found and url_part:
                 assistant_logger.info(f"Обнаружен URL-подобный паттерн: {url_part}")
-                return search_endpoint_tool.func(url_part)
+                return self._add_model_info(search_endpoint_tool.func(url_part))
             
             # Проверяем, не является ли запрос запросом на поиск информации о ссылке или API
             if any(pattern in user_input.lower() for pattern in ["что за ссылка", "что за api", "что за эндпоинт", "информация о ссылке", "api endpoint", "расскажи про /"]):
                 assistant_logger.info(f"Запрос на поиск информации о ссылке или API: {user_input[:50]}...")
-                return search_endpoint_tool.func(user_input)
+                return self._add_model_info(search_endpoint_tool.func(user_input))
             
             # Проверяем, не является ли запрос запросом на поиск термина в глоссарии
             if any(pattern in user_input.lower() for pattern in ["что такое", "что означает", "значение термина", "определение"]):
                 assistant_logger.info(f"Запрос на поиск термина в глоссарии: {user_input[:50]}...")
-                return search_glossary_tool.func(user_input)
+                return self._add_model_info(search_glossary_tool.func(user_input))
             
             # Проверяем запрос "что это" только если в нем нет URL-подобных паттернов
             if "что это" in user_input.lower() and not url_pattern_found:
                 assistant_logger.info(f"Запрос на поиск термина в глоссарии: {user_input[:50]}...")
-                return search_glossary_tool.func(user_input)
+                return self._add_model_info(search_glossary_tool.func(user_input))
             
             # Получаем агента
             agent = self.get_agent()
@@ -188,13 +188,13 @@ class AssistantAgent:
             
             # Извлекаем ответ из результата
             if "output" in response:
-                return response["output"]
+                return self._add_model_info(response["output"])
             else:
-                return "Не удалось получить ответ от агента."
+                return self._add_model_info("Не удалось получить ответ от агента.")
         except Exception as e:
             error_msg = f"Ошибка при обработке запроса: {str(e)}"
             assistant_logger.error(error_msg, exc_info=True)
-            return f"❌ {error_msg}"
+            return self._add_model_info(f"❌ {error_msg}")
     
     def _redirect_to_alert_agent(self, user_input: str) -> str:
         """
@@ -279,6 +279,24 @@ class AssistantAgent:
             error_msg = f"Ошибка при поиске информации об API-эндпоинте: {str(e)}"
             assistant_logger.error(error_msg, exc_info=True)
             return f"❌ {error_msg}"
+    
+    def _add_model_info(self, response: str) -> str:
+        """
+        Добавляет информацию о модели GigaChat к ответу.
+        
+        Args:
+            response: Исходный ответ
+            
+        Returns:
+            Ответ с добавленной информацией о модели
+        """
+        if response:
+            # Добавляем информацию в конец ответа
+            from config.settings import get_settings
+            settings = get_settings()
+            model_name = settings.get("gigachat_model", "GigaChat")
+            return f"{response}\n\n_Ответ сформирован с помощью модели {model_name}_"
+        return response
 
 # Создаем глобальный экземпляр интерактивного ассистента
 assistant_agent = AssistantAgent()
